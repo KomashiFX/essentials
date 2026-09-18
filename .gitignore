@@ -1,4 +1,6 @@
 .private/
+.github/workflows/
+tools/
 
 # O índice é gerado localmente e versionado para publicação sem Actions
 __pycache__/
