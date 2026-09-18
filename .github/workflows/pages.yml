@@ -21,13 +21,39 @@ jobs:
       - name: Baixar código
         uses: actions/checkout@v4
 
-      - name: Preparar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
       - name: Gerar índice dos itens
-        run: python tools/build.py
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          items = Path('data/items')
+          output = items / 'index.js'
+          catalog = []
+          for path in sorted(items.glob('*.json'), key=lambda item: item.name.lower()):
+            raw = path.read_text(encoding='utf-8').strip()
+            if not raw:
+              continue
+            try:
+              item = json.loads(raw)
+            except json.JSONDecodeError as error:
+              print(f'Ignorado {path.name}: {error}')
+              continue
+            item.setdefault('slug', path.stem.lower().replace(' ', '-'))
+            catalog.append({
+              'file': path.name,
+              **{key: item.get(key) for key in (
+                'slug', 'Title', 'aliases', 'Description', 'Category',
+                'Image', 'Logo', 'Banner'
+              )}
+            })
+          output.write_text(
+            'window.ESSENTIALS_ITEMS = ' + json.dumps(catalog, ensure_ascii=False, indent=2) + ';\n',
+            encoding='utf-8'
+          )
+          print(f'Índice gerado com {len(catalog)} itens')
+          PY
 
       - name: Preparar Pages
         uses: actions/configure-pages@v5
