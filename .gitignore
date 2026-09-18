@@ -1,7 +1,6 @@
 .private/
 
-# Gerado por coisas privadas
-data/items/index.js
+# O índice é gerado localmente e versionado para publicação sem Actions
 __pycache__/
 *.py[cod]
 
