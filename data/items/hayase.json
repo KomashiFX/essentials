@@ -1,0 +1,14 @@
+{
+  "slug": "hayase",
+  "Title": "Hayase",
+  "Description": "Aplicação pra assistir animes em Streaming (torrent)",
+  "Category": "Streaming",
+  "text": "Hayase é um dos melhores apps para ver animes no PC, Android e TV (e outros se pá), não só isso como você também pode vincular anilist e etc com ele, o streaming dele é o mesmo do Stremio, usando torrent, então se você tem uma internet boa e souber usar ele de boa, vai ser tranquilo pra você, agora se for mais burrinho(a), ai você que se vire, vai de YouTube ai sei lá.",
+  "info": "Informação de Segurança",
+  "infotxt": "O Hayase ele é código aberto, então você não vai ter problemas com ele.",
+  "aliases": [
+    "hayase"
+  ],
+  "ButtonLink": "https://hayase.watch/",
+  "ButtonLabel": "Baixar Hayase"
+}

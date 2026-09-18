@@ -1,0 +1,11 @@
+.private/
+
+# Gerado por coisas privadas
+data/items/index.js
+__pycache__/
+*.py[cod]
+
+# temps (se pá n vou nem usar)
+.DS_Store
+Thumbs.db
+*.log
