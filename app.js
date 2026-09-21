@@ -336,6 +336,11 @@ function platformBadges(platforms) {
   }).join('');
 }
 
+function cardDescriptionHTML(value) {
+  const withoutLinks = String(value ?? '').replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/gi, '$1');
+  return markdownHTML(withoutLinks);
+}
+
 function cardHTML(item) {
   const banner = item.Banner || item.banner || (Array.isArray(item.Image) ? item.Image[0] : item.Image);
   const logo = item.Logo || item.logo;
@@ -347,7 +352,7 @@ function cardHTML(item) {
         ${platformBadges(item.Platforms) ? `<div class="card-platforms">${platformBadges(item.Platforms)}</div>` : ''}
       </div>
       <div class="card-title-row">${logoMarkup(logo)}<h2>${escapeHTML(item.Title)}</h2></div>
-      <div class="card-description markdown">${markdownHTML(item.Description)}</div>
+      <div class="card-description markdown">${cardDescriptionHTML(item.Description)}</div>
     </div>
     <div class="card-foot"><iconify-icon class="arrow" icon="solar:arrow-up-right-linear" aria-hidden="true"></iconify-icon></div>
   </a>`;
