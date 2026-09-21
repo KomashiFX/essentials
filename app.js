@@ -1,6 +1,5 @@
 const state = { items: [], query: '', category: 'TODOS' };
 const SOUNDCLOUD_PROFILE_URL = 'https://soundcloud.com/sui_uzi';
-<<<<<<< HEAD
 const player = {
   tracks: [],
   index: 0,
@@ -10,10 +9,6 @@ const player = {
   duration: 0,
   error: false
 };
-=======
-const player = { tracks: [{ title: 'SUI UZI', artist: 'SUI UZI', src: SOUNDCLOUD_PROFILE_URL, officialUrl: SOUNDCLOUD_PROFILE_URL }], index: 0, widget: null, playing: false, duration: 0 };
-let playerIdleTimer;
->>>>>>> 1961bbe618528efe39dc18720e0b357150560385
 const app = document.querySelector('#app');
 
 const playerElements = {
@@ -167,29 +162,11 @@ function syncTrackList() {
 function selectTrack(index, autoplay = false) {
   if (!player.widget || !player.tracks.length) return;
   player.index = (index + player.tracks.length) % player.tracks.length;
-<<<<<<< HEAD
-  player.duration = player.tracks[player.index]?.duration || 0;
-  playerElements.seek.value = 0;
-  playerElements.current.textContent = '0:00';
-  updatePlayer();
-
-  const target = player.index;
-  if (typeof player.widget.skip === 'function') {
-    player.widget.skip(target);
-    if (autoplay) player.widget.play();
-  } else {
-    const track = player.tracks[target];
-    if (!track?.src) return;
-    player.widget.load(track.src, { auto_play: autoplay, show_artwork: false, hide_related: true, show_comments: false, show_user: false, show_reposts: false, visual: false });
-  }
-  player.playing = autoplay;
-=======
   const track = player.tracks[player.index];
   if (!player.widget) return;
   player.widget.load(track.src, { auto_play: autoplay, show_artwork: false, hide_related: true, visual: false });
   player.playing = autoplay;
   player.duration = 0;
->>>>>>> 1961bbe618528efe39dc18720e0b357150560385
   updatePlayer();
 }
 
@@ -201,87 +178,6 @@ function setupPlayer() {
   const frame = document.querySelector('#soundcloud-player');
   if (!frame || !window.SC?.Widget) return;
   const playerElement = document.querySelector('#music-player');
-<<<<<<< HEAD
-  ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => playerElement.addEventListener(eventName, wakePlayer, { passive: true }));
-
-  const params = new URLSearchParams({
-    url: SOUNDCLOUD_PROFILE_URL,
-    color: '#d2f36b',
-    auto_play: 'false',
-    hide_related: 'true',
-    show_comments: 'false',
-    show_user: 'false',
-    show_reposts: 'false',
-    show_artwork: 'false',
-    visual: 'false'
-  });
-  frame.src = `https://w.soundcloud.com/player/?${params.toString()}`;
-  player.widget = window.SC.Widget(frame);
-
-  player.widget.bind(window.SC.Widget.Events.READY, () => {
-    player.ready = true;
-    player.error = false;
-    player.widget.setVolume(Number(playerElements.volume.value) * 100);
-    updatePlayer();
-    syncTrackList();
-  });
-  player.widget.bind(window.SC.Widget.Events.PLAY, () => {
-    player.playing = true;
-    syncCurrentSound();
-    player.widget.getDuration(duration => {
-      if (Number.isFinite(duration)) player.duration = duration;
-      updatePlayer();
-    });
-  });
-  player.widget.bind(window.SC.Widget.Events.PAUSE, () => {
-    player.playing = false;
-    updatePlayer();
-  });
-  player.widget.bind(window.SC.Widget.Events.FINISH, () => {
-    if (player.tracks.length > 1) selectTrack(player.index + 1, true);
-    else {
-      player.playing = false;
-      updatePlayer();
-    }
-  });
-  player.widget.bind(window.SC.Widget.Events.PLAY_PROGRESS, data => {
-    const position = Number(data?.currentPosition) || 0;
-    const relative = Number(data?.relativePosition) || 0;
-    if (!player.duration && relative > 0) player.duration = position / relative;
-    playerElements.current.textContent = formatTime(position / 1000);
-    playerElements.duration.textContent = formatTime(player.duration / 1000);
-    playerElements.seek.value = Math.max(0, Math.min(100, relative * 100));
-  });
-  player.widget.bind(window.SC.Widget.Events.ERROR, () => {
-    player.ready = true;
-    player.error = true;
-    player.playing = false;
-    updatePlayer();
-  });
-
-  playerElements.play.addEventListener('click', () => {
-    wakePlayer();
-    if (!player.widget || !player.tracks.length) return;
-    if (player.playing) player.widget.pause();
-    else player.widget.play();
-  });
-  playerElements.prev.addEventListener('click', () => { wakePlayer(); selectTrack(player.index - 1, true); });
-  playerElements.next.addEventListener('click', () => { wakePlayer(); selectTrack(player.index + 1, true); });
-  playerElements.seek.addEventListener('input', () => {
-    wakePlayer();
-    if (player.widget && player.duration) player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
-  });
-  playerElements.volume.addEventListener('input', () => {
-    wakePlayer();
-    if (player.widget) player.widget.setVolume(Number(playerElements.volume.value) * 100);
-  });
-
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.setActionHandler('play', () => player.widget?.play());
-    navigator.mediaSession.setActionHandler('pause', () => player.widget?.pause());
-    navigator.mediaSession.setActionHandler('previoustrack', () => selectTrack(player.index - 1, true));
-    navigator.mediaSession.setActionHandler('nexttrack', () => selectTrack(player.index + 1, true));
-=======
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => playerElement.addEventListener(eventName, resetPlayerIdle, { passive: true }));
   resetPlayerIdle();
   frame.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(SOUNDCLOUD_PROFILE_URL)}&color=%23c7e879&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&visual=false`;
@@ -318,7 +214,6 @@ function setupPlayer() {
     navigator.mediaSession.setActionHandler('pause', () => player.widget?.pause());
     navigator.mediaSession.setActionHandler('previoustrack', () => player.widget?.prev());
     navigator.mediaSession.setActionHandler('nexttrack', () => player.widget?.next());
->>>>>>> 1961bbe618528efe39dc18720e0b357150560385
   }
 }
 
