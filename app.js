@@ -1,15 +1,20 @@
 const state = { items: [], query: '', category: 'TODOS' };
-const player = { tracks: [], index: -1, audio: document.querySelector('#audio') };
-let playerIdleTimer;
+const SOUNDCLOUD_PROFILE_URL = 'https://soundcloud.com/sui_uzi';
+const player = {
+  tracks: [],
+  index: 0,
+  widget: null,
+  ready: false,
+  playing: false,
+  duration: 0,
+  error: false
+};
 const app = document.querySelector('#app');
 
 const playerElements = {
   art: document.querySelector('#player-art'),
-  nowPlaying: document.querySelector('#player-now-playing'),
-  nowPlayingArt: document.querySelector('#player-now-playing-art'),
-  nowPlayingTitle: document.querySelector('#player-now-playing-title'),
-  nowPlayingArtist: document.querySelector('#player-now-playing-artist'),
   titleLink: document.querySelector('#player-title-link'),
+  sourceLink: document.querySelector('#player-source-link'),
   title: document.querySelector('#player-title'),
   artist: document.querySelector('#player-artist'),
   play: document.querySelector('#player-play'),
@@ -23,11 +28,23 @@ const playerElements = {
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) return '0:00';
-  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  const safe = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`;
 }
 
 function trackCover(track) {
-  return track.cover || '';
+  return track?.cover || '';
+}
+
+function mapSound(sound) {
+  return {
+    title: sound?.title || 'Faixa sem título',
+    artist: sound?.publisher_metadata?.artist || sound?.user?.username || 'SUI UZI',
+    src: sound?.permalink_url || '',
+    officialUrl: sound?.permalink_url || SOUNDCLOUD_PROFILE_URL,
+    cover: sound?.artwork_url || sound?.user?.avatar_url || '',
+    duration: Number.isFinite(sound?.duration) ? sound.duration : 0
+  };
 }
 
 function updateMediaSession(track) {
@@ -35,106 +52,194 @@ function updateMediaSession(track) {
   const cover = trackCover(track);
   navigator.mediaSession.metadata = new MediaMetadata({
     title: track.title,
-    artist: track.artist || 'Essentials',
-    album: track.album || 'Essentials',
+    artist: track.artist || 'SUI UZI',
+    album: 'SUI UZI • SoundCloud',
     artwork: cover ? [{ src: cover, sizes: '512x512', type: 'image/jpeg' }] : []
   });
 }
 
+function updateNavigation() {
+  const hasTracks = player.tracks.length > 0;
+  const canSkip = player.tracks.length > 1;
+  [playerElements.prev, playerElements.next].forEach(button => {
+    button.disabled = !canSkip;
+    button.setAttribute('aria-disabled', String(!canSkip));
+  });
+  playerElements.play.disabled = !hasTracks;
+}
+
 function updatePlayer() {
   const track = player.tracks[player.index];
-  if (!track) return;
+  if (!track) {
+    playerElements.title.textContent = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
+    playerElements.artist.textContent = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
+    playerElements.play.innerHTML = '<iconify-icon icon="solar:play-linear"></iconify-icon>';
+    updateNavigation();
+    return;
+  }
+
   const cover = trackCover(track);
-  const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : '';
+  const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
   playerElements.title.textContent = track.title;
-  if (officialUrl) playerElements.titleLink.href = officialUrl;
-  else playerElements.titleLink.removeAttribute('href');
-  playerElements.titleLink.classList.toggle('has-link', Boolean(officialUrl));
-  playerElements.titleLink.setAttribute('aria-label', officialUrl ? `Abrir ${track.title} oficial` : track.title);
-  playerElements.artist.textContent = track.artist || 'Essentials';
+  playerElements.artist.textContent = track.artist || 'SUI UZI';
+  playerElements.titleLink.href = officialUrl;
+  playerElements.titleLink.classList.add('has-link');
+  playerElements.titleLink.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
+  playerElements.sourceLink.href = officialUrl;
   playerElements.art.innerHTML = cover
-    ? `<img src="${escapeHTML(cover)}" alt="">`
+    ? `<img src="${escapeHTML(cover)}" alt="" loading="lazy">`
     : '<iconify-icon icon="solar:music-note-3-linear"></iconify-icon>';
-  if (officialUrl) playerElements.art.href = officialUrl;
-  else playerElements.art.removeAttribute('href');
-  playerElements.art.classList.toggle('has-link', Boolean(officialUrl));
-  playerElements.play.innerHTML = `<iconify-icon icon="${player.audio.paused ? 'solar:play-linear' : 'solar:pause-linear'}"></iconify-icon>`;
-  playerElements.play.setAttribute('aria-label', player.audio.paused ? 'Reproduzir' : 'Pausar');
+  playerElements.art.href = officialUrl;
+  playerElements.art.classList.add('has-link');
+  playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
+  playerElements.play.setAttribute('aria-label', player.playing ? 'Pausar' : 'Reproduzir');
+  playerElements.play.title = player.playing ? 'Pausar' : 'Reproduzir';
+  playerElements.seek.value = 0;
+  playerElements.current.textContent = '0:00';
+  playerElements.duration.textContent = formatTime(track.duration / 1000);
+  if (track.duration) player.duration = track.duration;
+  updateNavigation();
   updateMediaSession(track);
 }
 
+function syncCurrentSound() {
+  if (!player.widget) return;
+
+  player.widget.getCurrentSoundIndex(index => {
+    if (Number.isInteger(index) && index >= 0) player.index = index;
+    player.widget.getCurrentSound(sound => {
+      if (!sound) return;
+      const mapped = mapSound(sound);
+      player.tracks[player.index] = { ...(player.tracks[player.index] || {}), ...mapped };
+      player.duration = mapped.duration || player.duration;
+      updatePlayer();
+    });
+  });
+}
+
+function syncTrackList() {
+  if (!player.widget) return;
+  player.widget.getSounds(sounds => {
+    player.error = false;
+    const nextTracks = Array.isArray(sounds) ? sounds.map(mapSound).filter(track => track.src) : [];
+    if (nextTracks.length) {
+      player.tracks = nextTracks;
+      player.index = 0;
+      const first = player.tracks[0];
+      if (first?.duration) player.duration = first.duration;
+    }
+    player.ready = true;
+    updatePlayer();
+    syncCurrentSound();
+  });
+}
+
 function selectTrack(index, autoplay = false) {
-  if (!player.tracks.length) return;
+  if (!player.widget || !player.tracks.length) return;
   player.index = (index + player.tracks.length) % player.tracks.length;
-  const track = player.tracks[player.index];
-  player.audio.src = track.src;
-  player.audio.load();
+  player.duration = player.tracks[player.index]?.duration || 0;
+  playerElements.seek.value = 0;
+  playerElements.current.textContent = '0:00';
   updatePlayer();
-  if (autoplay) player.audio.play().catch(() => {});
+
+  const target = player.index;
+  if (typeof player.widget.skip === 'function') {
+    player.widget.skip(target);
+    if (autoplay) player.widget.play();
+  } else {
+    const track = player.tracks[target];
+    if (!track?.src) return;
+    player.widget.load(track.src, { auto_play: autoplay, show_artwork: false, hide_related: true, show_comments: false, show_user: false, show_reposts: false, visual: false });
+  }
+  player.playing = autoplay;
+  updatePlayer();
 }
 
-function showNowPlaying(track) {
-  if (!track || !playerElements.nowPlaying) return;
-  const cover = trackCover(track);
-  playerElements.nowPlayingTitle.textContent = track.title;
-  playerElements.nowPlayingArtist.textContent = track.artist || 'Essentials';
-  playerElements.nowPlayingArt.innerHTML = cover
-    ? `<img src="${escapeHTML(cover)}" alt="">`
-    : '<iconify-icon icon="solar:music-note-3-linear"></iconify-icon>';
-  playerElements.nowPlaying.setAttribute('aria-hidden', 'false');
-  playerElements.nowPlaying.classList.remove('show');
-  void playerElements.nowPlaying.offsetWidth;
-  playerElements.nowPlaying.classList.add('show');
-}
-
-function resetPlayerIdle() {
-  const playerElement = document.querySelector('#music-player');
-  if (!playerElement) return;
-  playerElement.classList.remove('player-mini');
-  clearTimeout(playerIdleTimer);
-  playerIdleTimer = setTimeout(() => playerElement.classList.add('player-mini'), 30000);
+function wakePlayer() {
+  // Keeps keyboard/touch interactions explicit without changing the player layout.
 }
 
 function setupPlayer() {
-  const audio = player.audio;
-  if (!audio) return;
+  const frame = document.querySelector('#soundcloud-player');
+  if (!frame || !window.SC?.Widget) return;
   const playerElement = document.querySelector('#music-player');
-  ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => playerElement.addEventListener(eventName, resetPlayerIdle, { passive: true }));
-  resetPlayerIdle();
-  fetch('data/music.json', { cache: 'no-store' }).then(res => res.ok ? res.json() : []).then(tracks => {
-    player.tracks = Array.isArray(tracks) ? tracks.filter(track => track && track.src && track.title) : [];
-    if (player.tracks.length) selectTrack(0);
-    else playerElements.artist.textContent = 'Nenhuma faixa disponível';
-  }).catch(() => {});
-  playerElements.play.addEventListener('click', () => {
-    if (!player.tracks.length) return;
-    if (player.index < 0) selectTrack(0);
-    if (audio.paused) {
-      audio.play().catch(() => {});
-      showNowPlaying(player.tracks[player.index]);
-    } else audio.pause();
+  ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => playerElement.addEventListener(eventName, wakePlayer, { passive: true }));
+
+  const params = new URLSearchParams({
+    url: SOUNDCLOUD_PROFILE_URL,
+    color: '#d2f36b',
+    auto_play: 'false',
+    hide_related: 'true',
+    show_comments: 'false',
+    show_user: 'false',
+    show_reposts: 'false',
+    show_artwork: 'false',
+    visual: 'false'
+  });
+  frame.src = `https://w.soundcloud.com/player/?${params.toString()}`;
+  player.widget = window.SC.Widget(frame);
+
+  player.widget.bind(window.SC.Widget.Events.READY, () => {
+    player.ready = true;
+    player.error = false;
+    player.widget.setVolume(Number(playerElements.volume.value) * 100);
+    updatePlayer();
+    syncTrackList();
+  });
+  player.widget.bind(window.SC.Widget.Events.PLAY, () => {
+    player.playing = true;
+    syncCurrentSound();
+    player.widget.getDuration(duration => {
+      if (Number.isFinite(duration)) player.duration = duration;
+      updatePlayer();
+    });
+  });
+  player.widget.bind(window.SC.Widget.Events.PAUSE, () => {
+    player.playing = false;
     updatePlayer();
   });
-  playerElements.prev.addEventListener('click', () => { selectTrack(player.index - 1, true); showNowPlaying(player.tracks[player.index]); });
-  playerElements.next.addEventListener('click', () => { selectTrack(player.index + 1, true); showNowPlaying(player.tracks[player.index]); });
-  playerElements.seek.addEventListener('input', () => { if (audio.duration) audio.currentTime = (playerElements.seek.value / 100) * audio.duration; });
-  playerElements.volume.addEventListener('input', () => { audio.volume = playerElements.volume.value; });
-  audio.volume = playerElements.volume.value;
-  audio.addEventListener('loadedmetadata', () => { playerElements.duration.textContent = formatTime(audio.duration); });
-  audio.addEventListener('timeupdate', () => {
-    playerElements.current.textContent = formatTime(audio.currentTime);
-    playerElements.seek.value = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+  player.widget.bind(window.SC.Widget.Events.FINISH, () => {
+    if (player.tracks.length > 1) selectTrack(player.index + 1, true);
+    else {
+      player.playing = false;
+      updatePlayer();
+    }
   });
-  audio.addEventListener('play', updatePlayer);
-  audio.addEventListener('pause', updatePlayer);
-  audio.addEventListener('ended', () => {
-    const nextIndex = (player.index + 1) % player.tracks.length;
-    selectTrack(nextIndex, true);
-    showNowPlaying(player.tracks[nextIndex]);
+  player.widget.bind(window.SC.Widget.Events.PLAY_PROGRESS, data => {
+    const position = Number(data?.currentPosition) || 0;
+    const relative = Number(data?.relativePosition) || 0;
+    if (!player.duration && relative > 0) player.duration = position / relative;
+    playerElements.current.textContent = formatTime(position / 1000);
+    playerElements.duration.textContent = formatTime(player.duration / 1000);
+    playerElements.seek.value = Math.max(0, Math.min(100, relative * 100));
   });
+  player.widget.bind(window.SC.Widget.Events.ERROR, () => {
+    player.ready = true;
+    player.error = true;
+    player.playing = false;
+    updatePlayer();
+  });
+
+  playerElements.play.addEventListener('click', () => {
+    wakePlayer();
+    if (!player.widget || !player.tracks.length) return;
+    if (player.playing) player.widget.pause();
+    else player.widget.play();
+  });
+  playerElements.prev.addEventListener('click', () => { wakePlayer(); selectTrack(player.index - 1, true); });
+  playerElements.next.addEventListener('click', () => { wakePlayer(); selectTrack(player.index + 1, true); });
+  playerElements.seek.addEventListener('input', () => {
+    wakePlayer();
+    if (player.widget && player.duration) player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
+  });
+  playerElements.volume.addEventListener('input', () => {
+    wakePlayer();
+    if (player.widget) player.widget.setVolume(Number(playerElements.volume.value) * 100);
+  });
+
   if ('mediaSession' in navigator) {
-    navigator.mediaSession.setActionHandler('play', () => audio.play());
-    navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+    navigator.mediaSession.setActionHandler('play', () => player.widget?.play());
+    navigator.mediaSession.setActionHandler('pause', () => player.widget?.pause());
     navigator.mediaSession.setActionHandler('previoustrack', () => selectTrack(player.index - 1, true));
     navigator.mediaSession.setActionHandler('nexttrack', () => selectTrack(player.index + 1, true));
   }
@@ -345,7 +450,7 @@ function cardHTML(item) {
   const banner = item.Banner || item.banner || (Array.isArray(item.Image) ? item.Image[0] : item.Image);
   const logo = item.Logo || item.logo;
   return `<a class="card ${banner ? 'has-banner' : ''}" href="#/item/${encodeURIComponent(item.slug)}">
-    ${banner ? `<img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy">` : ''}
+    ${banner ? `<div class="card-media"><img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy"></div>` : ''}
     <div class="card-content">
       <div class="card-meta">
         ${item.Category ? `<div class="card-category">${escapeHTML(item.Category)}</div>` : ''}
@@ -354,7 +459,7 @@ function cardHTML(item) {
       <div class="card-title-row">${logoMarkup(logo)}<h2>${escapeHTML(item.Title)}</h2></div>
       <div class="card-description markdown">${cardDescriptionHTML(item.Description)}</div>
     </div>
-    <div class="card-foot"><iconify-icon class="arrow" icon="solar:arrow-up-right-linear" aria-hidden="true"></iconify-icon></div>
+    <div class="card-foot"><span>ABRIR</span><iconify-icon class="arrow" icon="solar:arrow-up-right-linear" aria-hidden="true"></iconify-icon></div>
   </a>`;
 }
 
