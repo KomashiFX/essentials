@@ -48,10 +48,28 @@ window.ESSENTIALS_ITEMS = [
     "Description": "Launcher para RetroArch, NetherSX2 e outros consoles para Android",
     "Category": "Launcher",
     "Image": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery6-1d6c0b49d672579f.png",
-    "Logo": "https://iisu.network/_app/immutable/assets/iisuE_T.CB6RCcd_.svg",
+    "Logo": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery6-1d6c0b49d672579f.png",
     "Banner": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery9-81e2eb06ffaf1568.png",
     "Platforms": [
       "android"
+    ]
+  },
+  {
+    "file": "sistemaoperacional.json",
+    "slug": "sistemaoperacional",
+    "Title": "Sistemas Operacionais",
+    "aliases": [
+      "Sistema",
+      "OS"
+    ],
+    "Description": "Veja `.iso` limpas para baixar e usar caso queira fazer um hard reset.",
+    "Category": "Ferramentas",
+    "Image": null,
+    "Logo": "https://logomaker.designfreelogoonline.com/media/productdesigner/logo/resized/1281_computer-03.png",
+    "Banner": "https://wallpapercave.com/wp/wp5515897.jpg",
+    "Platforms": [
+      "linux",
+      "pc"
     ]
   },
   {
