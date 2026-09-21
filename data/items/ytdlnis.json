@@ -1,0 +1,14 @@
+{
+  "slug": "ytdlnis",
+  "Title": "YTDLnis",
+  "Description": "Aplicativo para baixar músicas, vídeos e outros conteúdos (suporte a mais de **[+1000 sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)**)",
+  "Category": "Downloaders",
+  "text": "Esse ai já fala tudo na descrição, tem 1000 sites de suporte e você pode baixar tudo que quiser, não só isso como consegue converter de vídeo pra música então se quiser baixar um som, use esse app, ele é o melhor.",
+  "removed": "SOMENTE ANDROID",
+  "removedtxt": "Não existe nenhuma versão para PC sobre este programa, caso você queira uma versão de PC baixe o **[YTDLP GUI](https://github.com/imsyy/yt-dlp-gui/releases)**.",
+  "Platforms": [
+    "android"
+  ],
+  "ButtonLink": "https://ytdlnis.org/download",
+  "ButtonLabel": "Baixar YTDLnis"
+}

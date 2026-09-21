@@ -4,6 +4,7 @@
   "aliases": ["firefox", "mozila", "fire fox"],
   "Description": "Navegador de código aberto com foco em privacidade.",
   "Category": "Navegadores",
+  "Platforms": ["pc", "android", "linux", "web"],
   "text": "A descrição antes de entrar aqui já falou tudo que o Firefox é, então já baixar ai, que se foda, ou você pode usar o [Brave](https://brave.com/download/), que é baseado no lixo do Chromium mas como o foco dele é em segurança e bloquear anúncios ele é mil vezes melhor que o Chrome.",
   "Logo": "https://cdn.simpleicons.org/firefox/FF7139",
   "Banner": "https://cdn.wallpapersafari.com/33/68/Fm2qBD.jpg",

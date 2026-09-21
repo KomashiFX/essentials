@@ -297,13 +297,55 @@ function renderHome() {
   document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{state.category=b.dataset.cat; renderHome();}));
 }
 
+function platformMap() {
+  return {
+    pc: { label: 'PC', icon: 'mdi:desktop-classic' },
+    android: { label: 'Android', icon: 'mdi:cellphone-android' },
+    ios: { label: 'iOS', icon: 'mdi:apple-ios' },
+    tv: { label: 'TV', icon: 'mdi:television' },
+    linux: { label: 'Linux', icon: 'mdi:linux' },
+    web: { label: 'Web', icon: 'mdi:web' },
+    browser: { label: 'Browser', icon: 'mdi:application-outline' },
+    tablet: { label: 'Tablet', icon: 'mdi:tablet-android' },
+    outros: { label: 'Outros', icon: 'mdi:devices' }
+  };
+}
+
+function normalizePlatformKey(value) {
+  const key = String(value ?? '').trim().toLowerCase();
+  if (!key) return '';
+  if (key === 'android-tv') return 'tv';
+  if (key.includes('pc') || key.includes('desktop') || key.includes('windows')) return 'pc';
+  if (key.includes('android')) return 'android';
+  if (key.includes('ios') || key.includes('iphone') || key.includes('ipad')) return 'ios';
+  if (key.includes('tv') || key.includes('smarttv') || key.includes('androidtv')) return 'tv';
+  if (key.includes('linux')) return 'linux';
+  if (key.includes('web') || key.includes('browser')) return 'web';
+  if (key.includes('tablet')) return 'tablet';
+  return 'outros';
+}
+
+function platformBadges(platforms) {
+  const values = Array.isArray(platforms) ? platforms : (typeof platforms === 'string' ? platforms.split(/[\n,;]+/) : []);
+  const unique = [...new Set(values.map(value => normalizePlatformKey(value)).filter(Boolean))];
+  if (!unique.length) return '';
+  const map = platformMap();
+  return unique.map(key => {
+    const meta = map[key] || { label: key, icon: 'mdi:circle-medium' };
+    return `<span class="platform-badge"><iconify-icon icon="${meta.icon}" aria-hidden="true"></iconify-icon><span>${escapeHTML(meta.label)}</span></span>`;
+  }).join('');
+}
+
 function cardHTML(item) {
   const banner = item.Banner || item.banner || (Array.isArray(item.Image) ? item.Image[0] : item.Image);
   const logo = item.Logo || item.logo;
   return `<a class="card ${banner ? 'has-banner' : ''}" href="#/item/${encodeURIComponent(item.slug)}">
     ${banner ? `<img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy">` : ''}
     <div class="card-content">
-      ${item.Category ? `<div class="card-category">${escapeHTML(item.Category)}</div>` : ''}
+      <div class="card-meta">
+        ${item.Category ? `<div class="card-category">${escapeHTML(item.Category)}</div>` : ''}
+        ${platformBadges(item.Platforms) ? `<div class="card-platforms">${platformBadges(item.Platforms)}</div>` : ''}
+      </div>
       <div class="card-title-row">${logoMarkup(logo)}<h2>${escapeHTML(item.Title)}</h2></div>
       <div class="card-description markdown">${markdownHTML(item.Description)}</div>
     </div>
@@ -358,11 +400,14 @@ async function renderDetail(slug) {
   const imageArray = Array.isArray(item.Image) ? item.Image : (item.Image ? [item.Image] : []);
   const buttonLinks = Array.isArray(item.ButtonLink) ? item.ButtonLink : (item.ButtonLink ? [item.ButtonLink] : []);
 
+  const detailsMeta = item.Category || item.Platforms ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformBadges(item.Platforms) ? `<div class="detail-platforms">${platformBadges(item.Platforms)}</div>` : ''}</div>` : '';
+
   let html = `<div class="detail-wrap">
     <a class="back" href="#/"><iconify-icon icon="solar:arrow-left-linear" aria-hidden="true"></iconify-icon> VOLTAR AO CATÁLOGO</a>
     ${hasRemoved ? `<div class="detail-removed">${marqueeBar('removed', item.removed || 'ESTE CONTEÚDO POSSUI UMA OBSERVAÇÃO', item.removedtxt || '')}</div>` : ''}
     <article class="detail">
       <header class="detail-head">
+        ${detailsMeta}
         <h1 class="detail-title">${escapeHTML(item.Title)}</h1>
         <div class="detail-desc markdown">${markdownHTML(item.Description)}</div>
         ${buttonLinks.length ? `<div class="actions">
