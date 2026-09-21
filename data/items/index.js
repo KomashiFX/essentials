@@ -39,6 +39,22 @@ window.ESSENTIALS_ITEMS = [
     ]
   },
   {
+    "file": "iisu.json",
+    "slug": "iisu",
+    "Title": "iiSU Launcher",
+    "aliases": [
+      "iisu"
+    ],
+    "Description": "Launcher para RetroArch, NetherSX2 e outros consoles para Android",
+    "Category": "Launcher",
+    "Image": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery6-1d6c0b49d672579f.png",
+    "Logo": "https://iisu.network/_app/immutable/assets/iisuE_T.CB6RCcd_.svg",
+    "Banner": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery9-81e2eb06ffaf1568.png",
+    "Platforms": [
+      "android"
+    ]
+  },
+  {
     "file": "visualc.json",
     "slug": "visualc",
     "Title": "Visual C++ (All in One)",
@@ -62,8 +78,8 @@ window.ESSENTIALS_ITEMS = [
     "Description": "Aplicativo para baixar músicas, vídeos e outros conteúdos (suporte a mais de **[+1000 sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)**)",
     "Category": "Downloaders",
     "Image": null,
-    "Logo": null,
-    "Banner": null,
+    "Logo": "https://ytdlnis.org/logo.png",
+    "Banner": "https://slidechef.net/wp-content/uploads/2024/09/youtube-background.jpg",
     "Platforms": [
       "android"
     ]

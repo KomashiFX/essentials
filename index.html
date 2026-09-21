@@ -47,7 +47,7 @@
       <iconify-icon icon="solar:volume-loud-linear" aria-hidden="true"></iconify-icon>
       <input id="player-volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume">
     </div>
-    <audio id="audio" preload="metadata"></audio>
+    <iframe id="soundcloud-player" title="Player do SoundCloud" allow="autoplay; encrypted-media" loading="lazy"></iframe>
   </section>
 
   <footer class="footer">
@@ -55,7 +55,8 @@
     <span class="copyright">© 2026 KomashiOFC</span>
   </footer>
 
-  <script src="data/items/index.js?v=4fbdf8d10e0c"></script>
+  <script src="data/items/index.js?v=e2a5ee7b59f6"></script>
+  <script src="https://w.soundcloud.com/player/api.js"></script>
   <script src="app.js?v=card-fix-2"></script>
 </body>
 </html>

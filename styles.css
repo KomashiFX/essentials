@@ -59,6 +59,7 @@ body {
 .player-volume { justify-content:flex-end; color:var(--muted); }
 .player-volume input { width:82px; }
 audio { display:none; }
+#soundcloud-player { position:absolute; width:100%; height:100px; border:0; opacity:0; pointer-events:none; }
 button, input { font: inherit; }
 a { color: inherit; text-decoration: none; }
 

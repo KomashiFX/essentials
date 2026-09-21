@@ -1,5 +1,6 @@
 const state = { items: [], query: '', category: 'TODOS' };
-const player = { tracks: [], index: -1, audio: document.querySelector('#audio') };
+const SOUNDCLOUD_PROFILE_URL = 'https://soundcloud.com/sui_uzi';
+const player = { tracks: [{ title: 'SUI UZI', artist: 'SUI UZI', src: SOUNDCLOUD_PROFILE_URL, officialUrl: SOUNDCLOUD_PROFILE_URL }], index: 0, widget: null, playing: false, duration: 0 };
 let playerIdleTimer;
 const app = document.querySelector('#app');
 
@@ -30,6 +31,23 @@ function trackCover(track) {
   return track.cover || '';
 }
 
+function syncCurrentSound() {
+  if (!player.widget) return;
+  player.widget.getCurrentSound(sound => {
+    if (!sound) return;
+    const current = player.tracks[player.index] || {};
+    player.tracks[player.index] = {
+      ...current,
+      title: sound.title || current.title,
+      artist: sound.user?.username || current.artist,
+      cover: sound.artwork_url || sound.user?.avatar_url || current.cover,
+      officialUrl: sound.permalink_url || current.officialUrl
+    };
+    updatePlayer();
+    showNowPlaying(player.tracks[player.index]);
+  });
+}
+
 function updateMediaSession(track) {
   if (!('mediaSession' in navigator) || !track) return;
   const cover = trackCover(track);
@@ -58,8 +76,8 @@ function updatePlayer() {
   if (officialUrl) playerElements.art.href = officialUrl;
   else playerElements.art.removeAttribute('href');
   playerElements.art.classList.toggle('has-link', Boolean(officialUrl));
-  playerElements.play.innerHTML = `<iconify-icon icon="${player.audio.paused ? 'solar:play-linear' : 'solar:pause-linear'}"></iconify-icon>`;
-  playerElements.play.setAttribute('aria-label', player.audio.paused ? 'Reproduzir' : 'Pausar');
+  playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
+  playerElements.play.setAttribute('aria-label', player.playing ? 'Pausar' : 'Reproduzir');
   updateMediaSession(track);
 }
 
@@ -67,10 +85,11 @@ function selectTrack(index, autoplay = false) {
   if (!player.tracks.length) return;
   player.index = (index + player.tracks.length) % player.tracks.length;
   const track = player.tracks[player.index];
-  player.audio.src = track.src;
-  player.audio.load();
+  if (!player.widget) return;
+  player.widget.load(track.src, { auto_play: autoplay, show_artwork: false, hide_related: true, visual: false });
+  player.playing = autoplay;
+  player.duration = 0;
   updatePlayer();
-  if (autoplay) player.audio.play().catch(() => {});
 }
 
 function showNowPlaying(track) {
@@ -96,47 +115,45 @@ function resetPlayerIdle() {
 }
 
 function setupPlayer() {
-  const audio = player.audio;
-  if (!audio) return;
+  const frame = document.querySelector('#soundcloud-player');
+  if (!frame || !window.SC?.Widget) return;
   const playerElement = document.querySelector('#music-player');
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => playerElement.addEventListener(eventName, resetPlayerIdle, { passive: true }));
   resetPlayerIdle();
-  fetch('data/music.json', { cache: 'no-store' }).then(res => res.ok ? res.json() : []).then(tracks => {
-    player.tracks = Array.isArray(tracks) ? tracks.filter(track => track && track.src && track.title) : [];
-    if (player.tracks.length) selectTrack(0);
-    else playerElements.artist.textContent = 'Nenhuma faixa disponível';
-  }).catch(() => {});
+  frame.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(SOUNDCLOUD_PROFILE_URL)}&color=%23c7e879&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&visual=false`;
+  player.widget = window.SC.Widget(frame);
+  player.widget.bind(window.SC.Widget.Events.READY, () => {
+    updatePlayer();
+    syncCurrentSound();
+  });
+  player.widget.bind(window.SC.Widget.Events.PLAY, () => { player.playing = true; syncCurrentSound(); updatePlayer(); });
+  player.widget.bind(window.SC.Widget.Events.PAUSE, () => { player.playing = false; updatePlayer(); });
+  player.widget.bind(window.SC.Widget.Events.FINISH, () => player.widget.next());
+  player.widget.bind(window.SC.Widget.Events.PLAY_PROGRESS, data => {
+    player.duration = data.currentPosition / Math.max(data.relativePosition, 0.001);
+    playerElements.current.textContent = formatTime(data.currentPosition / 1000);
+    playerElements.duration.textContent = formatTime(player.duration / 1000);
+    playerElements.seek.value = data.relativePosition * 100;
+  });
   playerElements.play.addEventListener('click', () => {
     if (!player.tracks.length) return;
     if (player.index < 0) selectTrack(0);
-    if (audio.paused) {
-      audio.play().catch(() => {});
+    if (player.playing) {
+      player.widget.pause();
+    } else {
+      player.widget.play();
       showNowPlaying(player.tracks[player.index]);
-    } else audio.pause();
-    updatePlayer();
+    }
   });
-  playerElements.prev.addEventListener('click', () => { selectTrack(player.index - 1, true); showNowPlaying(player.tracks[player.index]); });
-  playerElements.next.addEventListener('click', () => { selectTrack(player.index + 1, true); showNowPlaying(player.tracks[player.index]); });
-  playerElements.seek.addEventListener('input', () => { if (audio.duration) audio.currentTime = (playerElements.seek.value / 100) * audio.duration; });
-  playerElements.volume.addEventListener('input', () => { audio.volume = playerElements.volume.value; });
-  audio.volume = playerElements.volume.value;
-  audio.addEventListener('loadedmetadata', () => { playerElements.duration.textContent = formatTime(audio.duration); });
-  audio.addEventListener('timeupdate', () => {
-    playerElements.current.textContent = formatTime(audio.currentTime);
-    playerElements.seek.value = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
-  });
-  audio.addEventListener('play', updatePlayer);
-  audio.addEventListener('pause', updatePlayer);
-  audio.addEventListener('ended', () => {
-    const nextIndex = (player.index + 1) % player.tracks.length;
-    selectTrack(nextIndex, true);
-    showNowPlaying(player.tracks[nextIndex]);
-  });
+  playerElements.prev.addEventListener('click', () => player.widget?.prev());
+  playerElements.next.addEventListener('click', () => player.widget?.next());
+  playerElements.seek.addEventListener('input', () => { if (player.widget && player.duration) player.widget.seekTo((playerElements.seek.value / 100) * player.duration); });
+  playerElements.volume.addEventListener('input', () => { if (player.widget) player.widget.setVolume(playerElements.volume.value * 100); });
   if ('mediaSession' in navigator) {
-    navigator.mediaSession.setActionHandler('play', () => audio.play());
-    navigator.mediaSession.setActionHandler('pause', () => audio.pause());
-    navigator.mediaSession.setActionHandler('previoustrack', () => selectTrack(player.index - 1, true));
-    navigator.mediaSession.setActionHandler('nexttrack', () => selectTrack(player.index + 1, true));
+    navigator.mediaSession.setActionHandler('play', () => player.widget?.play());
+    navigator.mediaSession.setActionHandler('pause', () => player.widget?.pause());
+    navigator.mediaSession.setActionHandler('previoustrack', () => player.widget?.prev());
+    navigator.mediaSession.setActionHandler('nexttrack', () => player.widget?.next());
   }
 }
 
