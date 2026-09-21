@@ -1,0 +1,19 @@
+{
+  "slug": "iisu",
+  "Title": "iiSU Launcher",
+  "Description": "Launcher para RetroArch, NetherSX2 e outros consoles para Android",
+  "Category": "Launcher",
+  "Logo": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery6-1d6c0b49d672579f.png",
+  "Banner": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery9-81e2eb06ffaf1568.png",
+  "text": "Como já diz no nome o iiSU é um lançador (launcher) de consoles, nele você pode vincular o iiSU com seu RetroArch e outros apps do celular para poder ter um visual bonito de seus jogos e etc e também usar RetroAchievements e Discord (pra conversar direto do app).",
+  "warn": "iiSU não é um emulador, então não baixe achando que ele vai rodar seus jogos, ele é apenas um lançador para outros apps só que com um visual superior a todos os outros.",
+  "guia": "Como usar?",
+  "guiatxt": "**É ALTAMENTE RECOMENDADO O USO DE CONTROLE**\n\nPrimeiro você vai a lista de consoles (`RB`) e logo em seguida clique na sua foto de perfil (ao lado da bateria) e selecione `Add Console`, após isso procure seu Console, o Emulador (seu app usado para aquele console) a pasta onde está seus jogos e finalize no summary, após isso basta apertar e segurar no console ir na última opção `Rescan console` e abrir ele logo após e apertar e segurar no seu jogo caso ele mostre dentro do console e ir em manage media pra baixar logos e etc, outras configurações você pode ir explorando no iiSU, já que são muitas não irei por todas aqui.",
+  "Platforms": [
+    "android"
+  ],
+  "aliases": [
+    "iisu"
+  ],
+  "Image": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery6-1d6c0b49d672579f.png"
+}
