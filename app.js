@@ -106,7 +106,6 @@ function updatePlayer() {
   playerElements.art.innerHTML = cover
     ? `<img src="${escapeHTML(cover)}" alt="" loading="lazy">`
     : '<iconify-icon icon="solar:music-note-3-linear"></iconify-icon>';
-<<<<<<< HEAD
   playerElements.art.href = officialUrl;
   playerElements.art.classList.add('has-link');
   playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
@@ -117,13 +116,6 @@ function updatePlayer() {
   playerElements.duration.textContent = formatTime(track.duration / 1000);
   if (track.duration) player.duration = track.duration;
   updateNavigation();
-=======
-  if (officialUrl) playerElements.art.href = officialUrl;
-  else playerElements.art.removeAttribute('href');
-  playerElements.art.classList.toggle('has-link', Boolean(officialUrl));
-  playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
-  playerElements.play.setAttribute('aria-label', player.playing ? 'Pausar' : 'Reproduzir');
->>>>>>> 1961bbe618528efe39dc18720e0b357150560385
   updateMediaSession(track);
 }
 
