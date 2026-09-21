@@ -19,12 +19,12 @@ window.ESSENTIALS_ITEMS = [
     "slug": "hayase",
     "Title": "Hayase",
     "aliases": [
-      "hayase"
+      "hayasehaya"
     ],
-    "Description": "Aplicação pra assistir animes em Streaming (torrent)",
+    "Description": "Melhor aplicativo para assistir animes em alta qualidade e sincronizar com seus sites favoritos, Anilist, MyAnimeList e etc.",
     "Category": "Streaming",
     "Image": null,
-    "Logo": null,
-    "Banner": null
+    "Logo": "M.00000117 61.5156237V4.6302097l66.145831 37.041664v19.84375l-47.624995-26.72291v16.40416zm66.145831-30.42707-23.547916-13.229174 23.547916-13.22917Z",
+    "Banner": "https://hayase.watch/app.webp"
   }
 ];

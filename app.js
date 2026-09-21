@@ -197,6 +197,17 @@ function escapeHTML(s) {
   return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 }
 
+function logoMarkup(source) {
+  const value = String(source ?? '').trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value)) return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
+  const svg = value.startsWith('<svg')
+    ? value.replace(/currentColor/gi, '#fff')
+    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 66.145831 61.515624"><path d="${escapeHTML(value)}" fill="#fff"></path></svg>`;
+  const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  return `<img class="card-logo" src="${escapeHTML(dataUri)}" alt="" loading="lazy">`;
+}
+
 function markdownInline(value) {
   let text = escapeHTML(value);
   text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -293,7 +304,7 @@ function cardHTML(item) {
     ${banner ? `<img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy">` : ''}
     <div class="card-content">
       ${item.Category ? `<div class="card-category">${escapeHTML(item.Category)}</div>` : ''}
-      <div class="card-title-row">${logo ? `<img class="card-logo" src="${escapeHTML(logo)}" alt="" loading="lazy">` : ''}<h2>${escapeHTML(item.Title)}</h2></div>
+      <div class="card-title-row">${logoMarkup(logo)}<h2>${escapeHTML(item.Title)}</h2></div>
       <div class="card-description markdown">${markdownHTML(item.Description)}</div>
     </div>
     <div class="card-foot"><iconify-icon class="arrow" icon="solar:arrow-up-right-linear" aria-hidden="true"></iconify-icon></div>

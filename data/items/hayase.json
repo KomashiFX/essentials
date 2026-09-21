@@ -1,13 +1,17 @@
 {
   "slug": "hayase",
   "Title": "Hayase",
-  "Description": "Aplicação pra assistir animes em Streaming (torrent)",
+  "Description": "Melhor aplicativo para assistir animes em alta qualidade e sincronizar com seus sites favoritos, Anilist, MyAnimeList e etc.",
   "Category": "Streaming",
-  "text": "Hayase é um dos melhores apps para ver animes no PC, Android e TV (e outros se pá), não só isso como você também pode vincular anilist e etc com ele, o streaming dele é o mesmo do Stremio, usando torrent, então se você tem uma internet boa e souber usar ele de boa, vai ser tranquilo pra você, agora se for mais burrinho(a), ai você que se vire, vai de YouTube ai sei lá.",
-  "info": "Informação de Segurança",
-  "infotxt": "O Hayase ele é código aberto, então você não vai ter problemas com ele.",
+  "Logo": "M.00000117 61.5156237V4.6302097l66.145831 37.041664v19.84375l-47.624995-26.72291v16.40416zm66.145831-30.42707-23.547916-13.229174 23.547916-13.22917Z",
+  "Banner": "https://hayase.watch/app.webp",
+  "text": "A descrição já diz tudo, mas você merece saber um pouco mais de como o aplicativo funciona, ele não é streaming igual os sites que você acha pela internet, o streaming dele é usando torrent, então quanto mais pessoas viram aquele anime mais rápido o arquivo vai baixar e carregar pra você assistir.\n\n**Como assim Baixar e Carregar?**\nBom, como é um torrent ele baixa enquanto você assiste, mas ele baixa apenas 1 minuto enquanto você está assistindo então caso você queira baixar o episódio que você vai estar assistindo ele já vai estar no caminho pra terminar de baixar o resto que não foi baixado para depois caso você queira (tem como mudar nas configurações), mas é isso, estou com preguiça de escrever mais, se vira ai.",
+  "info": "Segurança da Aplicação",
+  "infotxt": "O aplicativo é seguro pois ele é código aberto, mas se não confia, que se foda, quem escolhe é você se usa esse app ou vê nos sites de animes com servidores movido por uma carroça.",
+  "guia": "Informações sobre as Fontes",
+  "guiatxt": "Você vai precisar importar duas fontes importantes para usar o Hayase, uma delas é https://raw.githubusercontent.com/tanzim2000/hayase-extension/refs/heads/main/index.json e a mais atualizada https://raw.githubusercontent.com/anh9000/anitorrent/main/hayase/index.json para ter mais chances de achar fontes com PT-BR.\n\nAo selecionar o EP do anime lembre sempre de ver a descrição abaixo do nome da fonte, por exemplo (mova o mouse pra o auto-select não selecionar a primeira fonte que aparecer):\n\n# 📁 Erai-raws\n`Bleach - 001 ~ 366 [DSNP WEB-DL][MultiSub]`\n[info] O número 001 não quer dizer o EP que você está, ele quer dizer que aquela fonte que você está assistindo possuí do EP 001 até EP 366 então o hayase vai sempre usar ela para assistir seu anime.\n\n# 📄 Erai-raws\n`Bleach - (...) - 01 [Multiple Subtitle][ENG][POR-BR](...)`\n[info] Esse sim está no EP 001 já que ele possuí um ícone de 📄 ao invés de 📁, quando o ícone é uma pasta significa que você está vendo um torrent com vários eps, quando é um papel, significa que você está vendo apenas aquele episódio que está no arquivo (no caso o EP 1).\n\n**AVISO**: Mesmo que tenha MultiSubs ou algo do tipo, tenha em mente que isso vale pra global, não é garantia que vai ter legendas em PT-BR, mas dependendo do anime, geralmente vai ter.",
   "aliases": [
-    "hayase"
+    "hayasehaya"
   ],
   "ButtonLink": "https://hayase.watch/",
   "ButtonLabel": "Baixar Hayase"
