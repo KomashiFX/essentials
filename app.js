@@ -156,7 +156,6 @@ function selectTrack(index, autoplay = false) {
 }
 
 function wakePlayer() {
-  // Keeps keyboard/touch interactions explicit without changing the player layout.
 }
 
 function setupPlayer() {
