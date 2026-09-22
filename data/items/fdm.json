@@ -1,0 +1,19 @@
+{
+  "slug": "fdm",
+  "Title": "Free Download Manager",
+  "Description": "Um baixador de qualquer coisa que você precisar.",
+  "Category": "Downloaders",
+  "Logo": "https://c.clc2l.com/c/thumbnail96/t/f/r/free-download-manager-sYZNqL.png",
+  "Banner": "https://cdn.neowin.com/news/images/uploaded/2025/06/1750452476_free_download_manager.webp",
+  "text": "Como já diz na descrição é um baixador de qualquer coisa que você quiser (isso se tiver suporte né), você pode integrar ele no seu navegador e seus downloads serão bem melhores, ao invés de usar o próprio navegador e ter que deixar ele aberto 24/7 até seu download terminar, não tem muito detalhe mais, você abre, baixa algo e pronto, faz o que quiser.",
+  "Platforms": [
+    "pc",
+    "android",
+    "linux"
+  ],
+  "aliases": [
+    "FDM"
+  ],
+  "ButtonLink": "https://www.freedownloadmanager.org/pt/download.htm#windows",
+  "ButtonLabel": "Baixar FDM"
+}

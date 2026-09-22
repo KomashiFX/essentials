@@ -1,5 +1,23 @@
 window.ESSENTIALS_ITEMS = [
   {
+    "file": "fdm.json",
+    "slug": "fdm",
+    "Title": "Free Download Manager",
+    "aliases": [
+      "FDM"
+    ],
+    "Description": "Um baixador de qualquer coisa que você precisar.",
+    "Category": "Downloaders",
+    "Image": null,
+    "Logo": "https://c.clc2l.com/c/thumbnail96/t/f/r/free-download-manager-sYZNqL.png",
+    "Banner": "https://cdn.neowin.com/news/images/uploaded/2025/06/1750452476_free_download_manager.webp",
+    "Platforms": [
+      "pc",
+      "android",
+      "linux"
+    ]
+  },
+  {
     "file": "Firefox.json",
     "slug": "firefox",
     "Title": "Mozilla Firefox",
@@ -48,10 +66,60 @@ window.ESSENTIALS_ITEMS = [
     "Description": "Launcher para RetroArch, NetherSX2 e outros consoles para Android",
     "Category": "Launcher",
     "Image": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery6-1d6c0b49d672579f.png",
-    "Logo": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery6-1d6c0b49d672579f.png",
+    "Logo": "https://vectorseek.com/wp-content/uploads/2026/01/iiSU-Logo-PNG-SVG-Vector-01.png",
     "Banner": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery9-81e2eb06ffaf1568.png",
     "Platforms": [
       "android"
+    ]
+  },
+  {
+    "file": "musicpresence.json",
+    "slug": "musicpresence",
+    "Title": "Music Presence",
+    "aliases": null,
+    "Description": "Ferramenta de Rich Presence para suas músicas",
+    "Category": "Ferramentas",
+    "Image": null,
+    "Logo": null,
+    "Banner": null,
+    "Platforms": [
+      "pc",
+      "linux"
+    ]
+  },
+  {
+    "file": "nora.json",
+    "slug": "nora",
+    "Title": "Nora",
+    "aliases": [
+      "nora"
+    ],
+    "Description": "Player de música offline com design moderno.",
+    "Category": "Música",
+    "Image": "https://raw.githubusercontent.com/Sandakan/Nora/v3.1.0-stable/resources/other/nora_logo_banner.webp",
+    "Logo": "https://noramusic.netlify.app/assets/nora-logo-CO31figH.webp",
+    "Banner": "https://raw.githubusercontent.com/Sandakan/Nora/refs/tags/v3.1.0-stable/resources/other/artwork%200.webp",
+    "Platforms": [
+      "pc",
+      "linux"
+    ]
+  },
+  {
+    "file": "opennow.json",
+    "slug": "opennow",
+    "Title": "OpenNOW",
+    "aliases": [
+      "OPN",
+      "ONOW"
+    ],
+    "Description": "Serviço de Streaming para substituir o GeForce NOW",
+    "Category": "Streaming",
+    "Image": null,
+    "Logo": "https://raw.githubusercontent.com/OpenCloudGaming/OpenNOW/refs/heads/main/opennow-qt/res/brand/opennow-mark.png",
+    "Banner": "https://raw.githubusercontent.com/OpenCloudGaming/OpenNOW/refs/heads/main/docs/assets/readme/desktop-home.webp",
+    "Platforms": [
+      "pc",
+      "linux"
     ]
   },
   {
