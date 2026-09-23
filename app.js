@@ -87,7 +87,15 @@ function preparePlayerTitleStage() {
 function resetMiniNextNotice() {
   clearTimeout(player.miniNoticeTimer);
   player.miniNoticeTimer = null;
-  playerElements.title?.classList.remove('is-next-label', 'is-next-title', 'is-returning', 'no-transition');
+
+  if (!playerElements.title) return;
+
+  playerElements.title.classList.remove(
+    'is-next-label',
+    'is-next-title',
+    'is-returning',
+    'no-transition'
+  );
 }
 
 function scheduleMiniNextNotice() {
@@ -100,12 +108,13 @@ function scheduleMiniNextNotice() {
   player.miniNoticeTrack = player.index;
   player.miniNoticePending = false;
 
+  playerElements.titleNextTrack.textContent = next.title;
+
   player.miniNoticeTimer = setTimeout(() => {
     const playerElement = document.querySelector('#music-player');
 
     if (!playerElement?.classList.contains('is-mini') || !player.playing) return;
 
-    playerElements.titleNextTrack.textContent = next.title;
     playerElements.title.classList.add('is-next-label');
 
     player.miniNoticeTimer = setTimeout(() => {
@@ -131,9 +140,9 @@ function scheduleMiniNextNotice() {
           playerElements.title.classList.remove('is-returning');
           void playerElements.title.offsetWidth;
           playerElements.title.classList.remove('no-transition');
-        }, 450);
-      }, 3000);
-    }, 2000);
+        }, 500);
+      }, 3450);
+    }, 2400);
   }, 10000);
 }
 
@@ -151,6 +160,7 @@ function expandPlayer() {
 
   clearTimeout(player.collapseTimer);
   playerElement.classList.remove('is-mini');
+  resetMiniNextNotice();
 }
 
 function schedulePlayerCollapse(delay = 2600) {
@@ -262,10 +272,11 @@ function syncTrackList() {
     player.tracks = Array.isArray(sounds) ? sounds.map(mapSound).filter(track => track.src) : [];
     player.index = 0;
     player.duration = player.tracks[0]?.duration || 0;
-    player.ready = true;
 
-    updatePlayer();
-    syncCurrentSound(() => updatePlayer());
+    syncCurrentSound(() => {
+      player.ready = true;
+      updatePlayer();
+    });
   });
 }
 
@@ -317,9 +328,6 @@ function setupPlayer() {
 
   const playerElement = document.querySelector('#music-player');
 
-  playerElement.classList.remove('is-loading');
-  playerElement.querySelectorAll('.player-loading,[data-player-loading]').forEach(el => el.remove());
-
   preparePlayerTitleStage();
   setPlayerCompact(true);
   updatePlayer();
@@ -356,7 +364,6 @@ function setupPlayer() {
   player.widget = window.SC.Widget(frame);
 
   player.widget.bind(window.SC.Widget.Events.READY, () => {
-    player.ready = true;
     player.error = false;
     player.widget.setVolume(Number(playerElements.volume.value) * 100);
     syncTrackList();
@@ -532,7 +539,9 @@ function logoMarkup(source) {
   const value = String(source ?? '').trim();
   if (!value) return '';
 
-  if (/^https?:\/\//i.test(value)) return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
+  if (/^https?:\/\//i.test(value)) {
+    return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
+  }
 
   const svg = value.startsWith('<svg')
     ? value.replace(/currentColor/gi, '#fff')
