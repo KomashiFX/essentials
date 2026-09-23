@@ -5,11 +5,11 @@ const player = {
   index: 0,
   widget: null,
   ready: false,
-  interfaceReady: false,
   playing: false,
   duration: 0,
   error: false,
   miniNoticeTimer: null,
+  miniNoticeTrack: null,
   collapseTimer: null
 };
 const app = document.querySelector('#app');
@@ -69,6 +69,7 @@ function updateMediaSession(track) {
 function preparePlayerTitleStage() {
   const title = playerElements.title;
   if (!title || title.dataset.stageReady === 'true') return;
+
   title.dataset.stageReady = 'true';
   title.classList.add('player-title-stage');
   title.innerHTML = `
@@ -76,29 +77,10 @@ function preparePlayerTitleStage() {
     <span class="player-title-next-label"><iconify-icon icon="solar:arrow-right-linear" aria-hidden="true"></iconify-icon><span>Próxima música</span></span>
     <span class="player-title-next-track"></span>
   `;
+
   playerElements.titleCurrent = title.querySelector('.player-title-current');
   playerElements.titleNextLabel = title.querySelector('.player-title-next-label');
   playerElements.titleNextTrack = title.querySelector('.player-title-next-track');
-}
-
-function ensurePlayerLoadingElement() {
-  const playerElement = document.querySelector('#music-player');
-  if (!playerElement) return null;
-  let loader = playerElement.querySelector('.player-loading');
-  if (!loader) {
-    loader = document.createElement('div');
-    loader.className = 'player-loading';
-    loader.innerHTML = '<iconify-icon icon="svg-spinners:90-ring-with-bg" aria-hidden="true"></iconify-icon>';
-    playerElement.appendChild(loader);
-  }
-  return loader;
-}
-
-function setPlayerLoading(loading = true) {
-  const playerElement = document.querySelector('#music-player');
-  if (!playerElement) return;
-  ensurePlayerLoadingElement();
-  playerElement.classList.toggle('is-loading', loading);
 }
 
 function resetMiniNextNotice() {
@@ -109,22 +91,34 @@ function resetMiniNextNotice() {
 
 function scheduleMiniNextNotice() {
   const next = player.tracks[player.index + 1];
-  if (!next?.title || !player.interfaceReady) return;
+  if (!next?.title || !player.ready || !player.playing) return;
+  if (player.miniNoticeTrack === player.index) return;
 
   resetMiniNextNotice();
+  player.miniNoticeTrack = player.index;
 
   player.miniNoticeTimer = setTimeout(() => {
     const playerElement = document.querySelector('#music-player');
-    if (!playerElement?.classList.contains('is-mini')) return;
+    if (!playerElement?.classList.contains('is-mini') || !player.playing) return;
 
     playerElements.titleNextTrack.textContent = next.title;
     playerElements.title.classList.add('is-next-label');
 
     player.miniNoticeTimer = setTimeout(() => {
+      if (!player.playing) {
+        resetMiniNextNotice();
+        return;
+      }
+
       playerElements.title.classList.remove('is-next-label');
       playerElements.title.classList.add('is-next-title');
 
       player.miniNoticeTimer = setTimeout(() => {
+        if (!player.playing) {
+          resetMiniNextNotice();
+          return;
+        }
+
         playerElements.title.classList.remove('is-next-title');
         playerElements.title.classList.add('is-returning');
 
@@ -136,7 +130,7 @@ function scheduleMiniNextNotice() {
         }, 450);
       }, 3000);
     }, 2000);
-  }, 5000);
+  }, 10000);
 }
 
 function setPlayerCompact(compact = true) {
@@ -150,20 +144,21 @@ function expandPlayer() {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
   clearTimeout(player.collapseTimer);
-  resetMiniNextNotice();
   playerElement.classList.remove('is-mini');
-  playerElements.nextUp?.setAttribute('hidden', '');
+  resetMiniNextNotice();
 }
 
 function schedulePlayerCollapse(delay = 2600) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
   clearTimeout(player.collapseTimer);
+
   player.collapseTimer = setTimeout(() => {
     if (playerElement.matches(':hover') || playerElement.matches(':focus-within')) {
       schedulePlayerCollapse(1800);
       return;
     }
+
     setPlayerCompact(true);
   }, delay);
 }
@@ -171,10 +166,12 @@ function schedulePlayerCollapse(delay = 2600) {
 function updateNavigation() {
   const hasTracks = player.tracks.length > 0;
   const canSkip = player.tracks.length > 1;
+
   [playerElements.prev, playerElements.next].forEach(button => {
     button.disabled = !canSkip;
     button.setAttribute('aria-disabled', String(!canSkip));
   });
+
   playerElements.play.disabled = !hasTracks;
 }
 
@@ -182,13 +179,8 @@ function updatePlayer() {
   const track = player.tracks[player.index];
 
   if (!track) {
-    const title = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
-    const artist = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
-
-    if (playerElements.titleCurrent) playerElements.titleCurrent.textContent = title;
-    else playerElements.title.textContent = title;
-
-    playerElements.artist.textContent = artist;
+    playerElements.title.textContent = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
+    playerElements.artist.textContent = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
     playerElements.play.innerHTML = '<iconify-icon icon="solar:play-linear"></iconify-icon>';
     updateNavigation();
     return;
@@ -197,8 +189,11 @@ function updatePlayer() {
   const cover = trackCover(track);
   const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
 
-  if (playerElements.titleCurrent) playerElements.titleCurrent.textContent = track.title;
-  else playerElements.title.textContent = track.title;
+  if (playerElements.titleCurrent) {
+    playerElements.titleCurrent.textContent = track.title;
+  } else {
+    playerElements.title.textContent = track.title;
+  }
 
   playerElements.artist.textContent = track.artist || 'SUI UZI';
   playerElements.titleLink.href = officialUrl;
@@ -216,6 +211,7 @@ function updatePlayer() {
   playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
   playerElements.play.setAttribute('aria-label', player.playing ? 'Pausar' : 'Reproduzir');
   playerElements.play.title = player.playing ? 'Pausar' : 'Reproduzir';
+
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
   playerElements.duration.textContent = formatTime((track.duration || player.duration || 0) / 1000);
@@ -255,14 +251,9 @@ function syncTrackList() {
     player.tracks = Array.isArray(sounds) ? sounds.map(mapSound).filter(track => track.src) : [];
     player.index = 0;
     player.duration = player.tracks[0]?.duration || 0;
-
-    syncCurrentSound(() => {
-      player.ready = true;
-      player.interfaceReady = true;
-      setPlayerLoading(false);
-      setPlayerCompact(true);
-      updatePlayer();
-    });
+    player.ready = true;
+    updatePlayer();
+    syncCurrentSound(() => updatePlayer());
   });
 }
 
@@ -270,6 +261,7 @@ function selectTrack(index, autoplay = false) {
   if (!player.widget || !player.tracks.length) return;
 
   player.index = (index + player.tracks.length) % player.tracks.length;
+  player.miniNoticeTrack = null;
   resetMiniNextNotice();
   player.duration = player.tracks[player.index]?.duration || 0;
   playerElements.seek.value = 0;
@@ -298,7 +290,6 @@ function selectTrack(index, autoplay = false) {
 
   player.playing = autoplay;
   updatePlayer();
-  scheduleMiniNextNotice();
 }
 
 function wakePlayer() {
@@ -313,7 +304,6 @@ function setupPlayer() {
   const playerElement = document.querySelector('#music-player');
 
   preparePlayerTitleStage();
-  setPlayerLoading(true);
   setPlayerCompact(true);
 
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
@@ -348,6 +338,7 @@ function setupPlayer() {
   player.widget = window.SC.Widget(frame);
 
   player.widget.bind(window.SC.Widget.Events.READY, () => {
+    player.ready = true;
     player.error = false;
     player.widget.setVolume(Number(playerElements.volume.value) * 100);
     syncTrackList();
@@ -360,6 +351,7 @@ function setupPlayer() {
       player.widget.getDuration(duration => {
         if (Number.isFinite(duration) && duration > 0) player.duration = duration;
         updatePlayer();
+        scheduleMiniNextNotice();
       });
     });
   });
@@ -375,18 +367,21 @@ function setupPlayer() {
       selectTrack(player.index + 1, true);
     } else {
       player.playing = false;
+      player.miniNoticeTrack = null;
       resetMiniNextNotice();
       updatePlayer();
     }
   });
 
   player.widget.bind(window.SC.Widget.Events.PLAY_PROGRESS, data => {
-    if (!player.interfaceReady) return;
+    if (!player.ready) return;
 
     const position = Number(data?.currentPosition) || 0;
     const relative = Number(data?.relativePosition) || 0;
 
-    if (!player.duration && relative > 0) player.duration = position / relative;
+    if (!player.duration && relative > 0) {
+      player.duration = position / relative;
+    }
 
     playerElements.current.textContent = formatTime(position / 1000);
     playerElements.duration.textContent = formatTime(player.duration / 1000);
@@ -395,10 +390,8 @@ function setupPlayer() {
 
   player.widget.bind(window.SC.Widget.Events.ERROR, () => {
     player.ready = true;
-    player.interfaceReady = true;
     player.error = true;
     player.playing = false;
-    setPlayerLoading(false);
     resetMiniNextNotice();
     updatePlayer();
   });
@@ -406,6 +399,7 @@ function setupPlayer() {
   playerElements.play.addEventListener('click', () => {
     wakePlayer();
     if (!player.widget || !player.tracks.length) return;
+
     if (player.playing) player.widget.pause();
     else player.widget.play();
   });
@@ -422,7 +416,9 @@ function setupPlayer() {
 
   playerElements.seek.addEventListener('input', () => {
     wakePlayer();
-    if (player.widget && player.duration) player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
+    if (player.widget && player.duration) {
+      player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
+    }
   });
 
   playerElements.volume.addEventListener('input', () => {
@@ -446,6 +442,7 @@ function editDistance(a, b) {
   if (a === b) return 0;
   if (!a) return b.length;
   if (!b) return a.length;
+
   const row = Array.from({ length: b.length + 1 }, (_, i) => i);
 
   for (let i = 1; i <= a.length; i++) {
@@ -511,7 +508,9 @@ function logoMarkup(source) {
   const value = String(source ?? '').trim();
   if (!value) return '';
 
-  if (/^https?:\/\//i.test(value)) return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
+  if (/^https?:\/\//i.test(value)) {
+    return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
+  }
 
   const svg = value.startsWith('<svg')
     ? value.replace(/currentColor/gi, '#fff')
@@ -585,7 +584,9 @@ function markdownHTML(value) {
 
     closeList();
 
-    if (line.trim()) output.push(`<p>${markdownInline(line)}</p>`);
+    if (line.trim()) {
+      output.push(`<p>${markdownInline(line)}</p>`);
+    }
   }
 
   if (code) output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
@@ -647,6 +648,7 @@ function renderHome() {
     </section>`;
 
   const input = document.querySelector('#search');
+
   input.addEventListener('input', e => {
     state.query = e.target.value;
     renderHome();
