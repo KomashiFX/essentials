@@ -9,9 +9,7 @@ const player = {
   playing: false,
   duration: 0,
   error: false,
-  miniNoticeShownFor: null,
-  miniNoticeStepTimer: null,
-  miniNoticeHideTimer: null,
+  miniNoticeTimer: null,
   collapseTimer: null
 };
 const app = document.querySelector('#app');
@@ -75,7 +73,7 @@ function preparePlayerTitleStage() {
   title.classList.add('player-title-stage');
   title.innerHTML = `
     <span class="player-title-current"></span>
-    <span class="player-title-next-label">Próxima música</span>
+    <span class="player-title-next-label"><iconify-icon icon="solar:arrow-right-linear" aria-hidden="true"></iconify-icon><span>Próxima música</span></span>
     <span class="player-title-next-track"></span>
   `;
   playerElements.titleCurrent = title.querySelector('.player-title-current');
@@ -103,46 +101,49 @@ function setPlayerLoading(loading = true) {
   playerElement.classList.toggle('is-loading', loading);
 }
 
-function getNextTrack() {
-  return player.tracks[player.index + 1] || null;
-}
-
 function resetMiniNextNotice() {
-  clearTimeout(player.miniNoticeStepTimer);
-  clearTimeout(player.miniNoticeHideTimer);
-  player.miniNoticeStepTimer = null;
-  player.miniNoticeHideTimer = null;
-  playerElements.title?.classList.remove('is-next-label', 'is-next-title');
+  clearTimeout(player.miniNoticeTimer);
+  player.miniNoticeTimer = null;
+  playerElements.title?.classList.remove('is-next-label', 'is-next-title', 'is-returning', 'no-transition');
 }
 
-function showMiniNextNotice() {
-  const playerElement = document.querySelector('#music-player');
-  const stage = playerElements.title;
-  const next = getNextTrack();
-  if (!player.interfaceReady || !playerElement?.classList.contains('is-mini') || !stage || !next?.title) return;
-  if (player.miniNoticeShownFor === player.index) return;
+function scheduleMiniNextNotice() {
+  const next = player.tracks[player.index + 1];
+  if (!next?.title || !player.interfaceReady) return;
 
   resetMiniNextNotice();
-  player.miniNoticeShownFor = player.index;
-  playerElements.titleNextLabel.textContent = 'Próxima música';
-  playerElements.titleNextTrack.textContent = next.title;
 
-  requestAnimationFrame(() => stage.classList.add('is-next-label'));
+  player.miniNoticeTimer = setTimeout(() => {
+    const playerElement = document.querySelector('#music-player');
+    if (!playerElement?.classList.contains('is-mini')) return;
 
-  player.miniNoticeStepTimer = setTimeout(() => {
-    stage.classList.remove('is-next-label');
-    stage.classList.add('is-next-title');
-  }, 900);
+    playerElements.titleNextTrack.textContent = next.title;
+    playerElements.title.classList.add('is-next-label');
 
-  player.miniNoticeHideTimer = setTimeout(() => resetMiniNextNotice(), 4300);
+    player.miniNoticeTimer = setTimeout(() => {
+      playerElements.title.classList.remove('is-next-label');
+      playerElements.title.classList.add('is-next-title');
+
+      player.miniNoticeTimer = setTimeout(() => {
+        playerElements.title.classList.remove('is-next-title');
+        playerElements.title.classList.add('is-returning');
+
+        player.miniNoticeTimer = setTimeout(() => {
+          playerElements.title.classList.add('no-transition');
+          playerElements.title.classList.remove('is-returning');
+          void playerElements.title.offsetWidth;
+          playerElements.title.classList.remove('no-transition');
+        }, 450);
+      }, 3000);
+    }, 2000);
+  }, 5000);
 }
 
 function setPlayerCompact(compact = true) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
   playerElement.classList.toggle('is-mini', compact);
-  if (compact) playerElements.nextUp?.setAttribute('hidden', '');
-  updateNextTrackSection();
+  playerElements.nextUp?.setAttribute('hidden', '');
 }
 
 function expandPlayer() {
@@ -151,14 +152,13 @@ function expandPlayer() {
   clearTimeout(player.collapseTimer);
   resetMiniNextNotice();
   playerElement.classList.remove('is-mini');
-  updateNextTrackSection();
+  playerElements.nextUp?.setAttribute('hidden', '');
 }
 
 function schedulePlayerCollapse(delay = 2600) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
   clearTimeout(player.collapseTimer);
-
   player.collapseTimer = setTimeout(() => {
     if (playerElement.matches(':hover') || playerElement.matches(':focus-within')) {
       schedulePlayerCollapse(1800);
@@ -168,30 +168,13 @@ function schedulePlayerCollapse(delay = 2600) {
   }, delay);
 }
 
-function updateNextTrackSection() {
-  const playerElement = document.querySelector('#music-player');
-  const next = getNextTrack();
-  if (!playerElements.nextUp || !playerElements.nextTitle) return;
-
-  if (!next?.title || playerElement?.classList.contains('is-mini')) {
-    playerElements.nextUp.setAttribute('hidden', '');
-    playerElements.nextTitle.textContent = '';
-    return;
-  }
-
-  playerElements.nextTitle.textContent = next.title;
-  playerElements.nextUp.removeAttribute('hidden');
-}
-
 function updateNavigation() {
   const hasTracks = player.tracks.length > 0;
   const canSkip = player.tracks.length > 1;
-
   [playerElements.prev, playerElements.next].forEach(button => {
     button.disabled = !canSkip;
     button.setAttribute('aria-disabled', String(!canSkip));
   });
-
   playerElements.play.disabled = !hasTracks;
 }
 
@@ -208,7 +191,6 @@ function updatePlayer() {
     playerElements.artist.textContent = artist;
     playerElements.play.innerHTML = '<iconify-icon icon="solar:play-linear"></iconify-icon>';
     updateNavigation();
-    updateNextTrackSection();
     return;
   }
 
@@ -241,7 +223,7 @@ function updatePlayer() {
   if (track.duration) player.duration = track.duration;
 
   updateNavigation();
-  updateNextTrackSection();
+  playerElements.nextUp?.setAttribute('hidden', '');
   updateMediaSession(track);
 }
 
@@ -288,7 +270,6 @@ function selectTrack(index, autoplay = false) {
   if (!player.widget || !player.tracks.length) return;
 
   player.index = (index + player.tracks.length) % player.tracks.length;
-  player.miniNoticeShownFor = null;
   resetMiniNextNotice();
   player.duration = player.tracks[player.index]?.duration || 0;
   playerElements.seek.value = 0;
@@ -317,6 +298,7 @@ function selectTrack(index, autoplay = false) {
 
   player.playing = autoplay;
   updatePlayer();
+  scheduleMiniNextNotice();
 }
 
 function wakePlayer() {
@@ -340,7 +322,6 @@ function setupPlayer() {
 
   playerElement.addEventListener('mouseenter', () => expandPlayer());
   playerElement.addEventListener('mouseleave', () => schedulePlayerCollapse());
-
   playerElement.addEventListener('focusin', () => expandPlayer());
 
   playerElement.addEventListener('focusout', () => {
@@ -385,6 +366,7 @@ function setupPlayer() {
 
   player.widget.bind(window.SC.Widget.Events.PAUSE, () => {
     player.playing = false;
+    resetMiniNextNotice();
     updatePlayer();
   });
 
@@ -393,7 +375,6 @@ function setupPlayer() {
       selectTrack(player.index + 1, true);
     } else {
       player.playing = false;
-      player.miniNoticeShownFor = null;
       resetMiniNextNotice();
       updatePlayer();
     }
@@ -410,12 +391,6 @@ function setupPlayer() {
     playerElements.current.textContent = formatTime(position / 1000);
     playerElements.duration.textContent = formatTime(player.duration / 1000);
     playerElements.seek.value = Math.max(0, Math.min(100, relative * 100));
-
-    const remaining = player.duration - position;
-
-    if (getNextTrack() && remaining > 0 && remaining <= 60000) {
-      showMiniNextNotice();
-    }
   });
 
   player.widget.bind(window.SC.Widget.Events.ERROR, () => {
@@ -424,6 +399,7 @@ function setupPlayer() {
     player.error = true;
     player.playing = false;
     setPlayerLoading(false);
+    resetMiniNextNotice();
     updatePlayer();
   });
 
@@ -446,9 +422,7 @@ function setupPlayer() {
 
   playerElements.seek.addEventListener('input', () => {
     wakePlayer();
-    if (player.widget && player.duration) {
-      player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
-    }
+    if (player.widget && player.duration) player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
   });
 
   playerElements.volume.addEventListener('input', () => {
@@ -472,7 +446,6 @@ function editDistance(a, b) {
   if (a === b) return 0;
   if (!a) return b.length;
   if (!b) return a.length;
-
   const row = Array.from({ length: b.length + 1 }, (_, i) => i);
 
   for (let i = 1; i <= a.length; i++) {
@@ -515,9 +488,7 @@ function fuzzyScore(query, item) {
     let matched = 0;
 
     for (const part of parts) {
-      if (hay.some(t => t.includes(part) || t.split(/\s+/).some(w => 1 - editDistance(part,w)/Math.max(part.length,w.length,1) > .62))) {
-        matched++;
-      }
+      if (hay.some(t => t.includes(part) || t.split(/\s+/).some(w => 1 - editDistance(part,w)/Math.max(part.length,w.length,1) > .62))) matched++;
     }
 
     best = Math.max(best, (matched / parts.length) * .85);
@@ -540,9 +511,7 @@ function logoMarkup(source) {
   const value = String(source ?? '').trim();
   if (!value) return '';
 
-  if (/^https?:\/\//i.test(value)) {
-    return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
-  }
+  if (/^https?:\/\//i.test(value)) return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
 
   const svg = value.startsWith('<svg')
     ? value.replace(/currentColor/gi, '#fff')
@@ -616,9 +585,7 @@ function markdownHTML(value) {
 
     closeList();
 
-    if (line.trim()) {
-      output.push(`<p>${markdownInline(line)}</p>`);
-    }
+    if (line.trim()) output.push(`<p>${markdownInline(line)}</p>`);
   }
 
   if (code) output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
@@ -648,11 +615,7 @@ function filteredItems() {
   if (state.category !== 'TODOS') arr = arr.filter(i => i.Category === state.category);
 
   if (state.query.trim()) {
-    arr = arr
-      .map(i => ({i, score: fuzzyScore(state.query, i)}))
-      .filter(x => x.score >= .48)
-      .sort((a,b) => b.score-a.score)
-      .map(x => x.i);
+    arr = arr.map(i => ({i, score: fuzzyScore(state.query, i)})).filter(x => x.score >= .48).sort((a,b)=>b.score-a.score).map(x=>x.i);
   } else {
     arr.sort((a,b) => (a.Title||'').localeCompare(b.Title||'', 'pt-BR'));
   }
@@ -684,7 +647,6 @@ function renderHome() {
     </section>`;
 
   const input = document.querySelector('#search');
-
   input.addEventListener('input', e => {
     state.query = e.target.value;
     renderHome();
@@ -692,8 +654,8 @@ function renderHome() {
     document.querySelector('#search')?.setSelectionRange(state.query.length,state.query.length);
   });
 
-  document.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => {
-    state.category = b.dataset.cat;
+  document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{
+    state.category=b.dataset.cat;
     renderHome();
   }));
 }
@@ -791,11 +753,7 @@ function renderLoading() {
 
 async function renderDetail(slug) {
   const meta = state.items.find(i=>i.slug===slug);
-
-  if (!meta) {
-    renderError('404');
-    return;
-  }
+  if (!meta) { renderError('404'); return; }
 
   renderLoading();
 
@@ -818,9 +776,7 @@ async function renderDetail(slug) {
   const imageArray = Array.isArray(item.Image) ? item.Image : (item.Image ? [item.Image] : []);
   const buttonLinks = Array.isArray(item.ButtonLink) ? item.ButtonLink : (item.ButtonLink ? [item.ButtonLink] : []);
 
-  const detailsMeta = item.Category || item.Platforms
-    ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformBadges(item.Platforms) ? `<div class="detail-platforms">${platformBadges(item.Platforms)}</div>` : ''}</div>`
-    : '';
+  const detailsMeta = item.Category || item.Platforms ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformBadges(item.Platforms) ? `<div class="detail-platforms">${platformBadges(item.Platforms)}</div>` : ''}</div>` : '';
 
   let html = `<div class="detail-wrap">
     <a class="back" href="#/"><iconify-icon icon="solar:arrow-left-linear" aria-hidden="true"></iconify-icon> VOLTAR AO CATÁLOGO</a>
@@ -851,7 +807,7 @@ async function renderDetail(slug) {
 
 function wireBars() {
   document.querySelectorAll('[data-expand]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', e => {
       const key = btn.dataset.expand;
       const target = document.querySelector(`#expand-${key}`);
       if (!target) return;
@@ -925,7 +881,7 @@ async function route() {
 
 window.addEventListener('hashchange', route);
 
-window.addEventListener('keydown', e => {
+window.addEventListener('keydown', e=> {
   if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k') {
     e.preventDefault();
     document.querySelector('#search')?.focus();
