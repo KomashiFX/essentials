@@ -80,8 +80,8 @@ window.ESSENTIALS_ITEMS = [
     "Description": "Ferramenta de Rich Presence para suas músicas",
     "Category": "Ferramentas",
     "Image": null,
-    "Logo": null,
-    "Banner": null,
+    "Logo": "https://cdn.discordapp.com/icons/1224509771068211292/deafde046a6b42d123f44b9b0bb04c49.png?size=256",
+    "Banner": "https://cdn.discordapp.com/discovery-splashes/1224509771068211292/7d4e56334b4aa4736fbdfd4e794addb7.jpg?size=2048&format=auto",
     "Platforms": [
       "pc",
       "linux"
