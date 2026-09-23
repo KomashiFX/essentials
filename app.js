@@ -9,6 +9,7 @@ const player = {
   duration: 0,
   error: false,
   miniNoticeTimer: null,
+  miniNoticePending: false,
   miniNoticeTrack: null,
   collapseTimer: null
 };
@@ -91,14 +92,17 @@ function resetMiniNextNotice() {
 
 function scheduleMiniNextNotice() {
   const next = player.tracks[player.index + 1];
-  if (!next?.title || !player.ready || !player.playing) return;
+
+  if (!next?.title || !player.ready || !player.playing || !player.miniNoticePending) return;
   if (player.miniNoticeTrack === player.index) return;
 
   resetMiniNextNotice();
   player.miniNoticeTrack = player.index;
+  player.miniNoticePending = false;
 
   player.miniNoticeTimer = setTimeout(() => {
     const playerElement = document.querySelector('#music-player');
+
     if (!playerElement?.classList.contains('is-mini') || !player.playing) return;
 
     playerElements.titleNextTrack.textContent = next.title;
@@ -136,6 +140,7 @@ function scheduleMiniNextNotice() {
 function setPlayerCompact(compact = true) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
+
   playerElement.classList.toggle('is-mini', compact);
   playerElements.nextUp?.setAttribute('hidden', '');
 }
@@ -143,14 +148,15 @@ function setPlayerCompact(compact = true) {
 function expandPlayer() {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
+
   clearTimeout(player.collapseTimer);
   playerElement.classList.remove('is-mini');
-  resetMiniNextNotice();
 }
 
 function schedulePlayerCollapse(delay = 2600) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
+
   clearTimeout(player.collapseTimer);
 
   player.collapseTimer = setTimeout(() => {
@@ -179,8 +185,13 @@ function updatePlayer() {
   const track = player.tracks[player.index];
 
   if (!track) {
-    playerElements.title.textContent = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
-    playerElements.artist.textContent = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
+    const title = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
+    const artist = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
+
+    if (playerElements.titleCurrent) playerElements.titleCurrent.textContent = title;
+    else playerElements.title.textContent = title;
+
+    playerElements.artist.textContent = artist;
     playerElements.play.innerHTML = '<iconify-icon icon="solar:play-linear"></iconify-icon>';
     updateNavigation();
     return;
@@ -252,6 +263,7 @@ function syncTrackList() {
     player.index = 0;
     player.duration = player.tracks[0]?.duration || 0;
     player.ready = true;
+
     updatePlayer();
     syncCurrentSound(() => updatePlayer());
   });
@@ -261,8 +273,10 @@ function selectTrack(index, autoplay = false) {
   if (!player.widget || !player.tracks.length) return;
 
   player.index = (index + player.tracks.length) % player.tracks.length;
+  player.miniNoticePending = Boolean(player.tracks[player.index + 1]);
   player.miniNoticeTrack = null;
   resetMiniNextNotice();
+
   player.duration = player.tracks[player.index]?.duration || 0;
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
@@ -303,8 +317,12 @@ function setupPlayer() {
 
   const playerElement = document.querySelector('#music-player');
 
+  playerElement.classList.remove('is-loading');
+  playerElement.querySelectorAll('.player-loading,[data-player-loading]').forEach(el => el.remove());
+
   preparePlayerTitleStage();
   setPlayerCompact(true);
+  updatePlayer();
 
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
     playerElement.addEventListener(eventName, wakePlayer, { passive: true });
@@ -367,6 +385,7 @@ function setupPlayer() {
       selectTrack(player.index + 1, true);
     } else {
       player.playing = false;
+      player.miniNoticePending = false;
       player.miniNoticeTrack = null;
       resetMiniNextNotice();
       updatePlayer();
@@ -392,6 +411,8 @@ function setupPlayer() {
     player.ready = true;
     player.error = true;
     player.playing = false;
+    player.miniNoticePending = false;
+    player.miniNoticeTrack = null;
     resetMiniNextNotice();
     updatePlayer();
   });
@@ -416,6 +437,7 @@ function setupPlayer() {
 
   playerElements.seek.addEventListener('input', () => {
     wakePlayer();
+
     if (player.widget && player.duration) {
       player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
     }
@@ -423,7 +445,10 @@ function setupPlayer() {
 
   playerElements.volume.addEventListener('input', () => {
     wakePlayer();
-    if (player.widget) player.widget.setVolume(Number(playerElements.volume.value) * 100);
+
+    if (player.widget) {
+      player.widget.setVolume(Number(playerElements.volume.value) * 100);
+    }
   });
 
   if ('mediaSession' in navigator) {
@@ -442,7 +467,6 @@ function editDistance(a, b) {
   if (a === b) return 0;
   if (!a) return b.length;
   if (!b) return a.length;
-
   const row = Array.from({ length: b.length + 1 }, (_, i) => i);
 
   for (let i = 1; i <= a.length; i++) {
@@ -508,9 +532,7 @@ function logoMarkup(source) {
   const value = String(source ?? '').trim();
   if (!value) return '';
 
-  if (/^https?:\/\//i.test(value)) {
-    return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
-  }
+  if (/^https?:\/\//i.test(value)) return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
 
   const svg = value.startsWith('<svg')
     ? value.replace(/currentColor/gi, '#fff')
@@ -584,9 +606,7 @@ function markdownHTML(value) {
 
     closeList();
 
-    if (line.trim()) {
-      output.push(`<p>${markdownInline(line)}</p>`);
-    }
+    if (line.trim()) output.push(`<p>${markdownInline(line)}</p>`);
   }
 
   if (code) output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
