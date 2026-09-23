@@ -5,10 +5,13 @@ const player = {
   index: 0,
   widget: null,
   ready: false,
+  interfaceReady: false,
   playing: false,
   duration: 0,
   error: false,
-  nextUpShownFor: null,
+  miniNoticeShownFor: null,
+  miniNoticeStepTimer: null,
+  miniNoticeHideTimer: null,
   collapseTimer: null
 };
 const app = document.querySelector('#app');
@@ -27,7 +30,10 @@ const playerElements = {
   duration: document.querySelector('#player-duration'),
   volume: document.querySelector('#player-volume'),
   nextUp: document.querySelector('#player-next-up'),
-  nextTitle: document.querySelector('#player-next-title')
+  nextTitle: document.querySelector('#player-next-title'),
+  titleCurrent: null,
+  titleNextLabel: null,
+  titleNextTrack: null
 };
 
 function formatTime(seconds) {
@@ -62,151 +68,253 @@ function updateMediaSession(track) {
   });
 }
 
+function preparePlayerTitleStage() {
+  const title = playerElements.title;
+  if (!title || title.dataset.stageReady === 'true') return;
+  title.dataset.stageReady = 'true';
+  title.classList.add('player-title-stage');
+  title.innerHTML = `
+    <span class="player-title-current"></span>
+    <span class="player-title-next-label">Próxima música</span>
+    <span class="player-title-next-track"></span>
+  `;
+  playerElements.titleCurrent = title.querySelector('.player-title-current');
+  playerElements.titleNextLabel = title.querySelector('.player-title-next-label');
+  playerElements.titleNextTrack = title.querySelector('.player-title-next-track');
+}
+
+function ensurePlayerLoadingElement() {
+  const playerElement = document.querySelector('#music-player');
+  if (!playerElement) return null;
+  let loader = playerElement.querySelector('.player-loading');
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.className = 'player-loading';
+    loader.innerHTML = '<iconify-icon icon="svg-spinners:90-ring-with-bg" aria-hidden="true"></iconify-icon>';
+    playerElement.appendChild(loader);
+  }
+  return loader;
+}
+
+function setPlayerLoading(loading = true) {
+  const playerElement = document.querySelector('#music-player');
+  if (!playerElement) return;
+  ensurePlayerLoadingElement();
+  playerElement.classList.toggle('is-loading', loading);
+}
+
+function getNextTrack() {
+  return player.tracks[player.index + 1] || null;
+}
+
+function resetMiniNextNotice() {
+  clearTimeout(player.miniNoticeStepTimer);
+  clearTimeout(player.miniNoticeHideTimer);
+  player.miniNoticeStepTimer = null;
+  player.miniNoticeHideTimer = null;
+  playerElements.title?.classList.remove('is-next-label', 'is-next-title');
+}
+
+function showMiniNextNotice() {
+  const playerElement = document.querySelector('#music-player');
+  const stage = playerElements.title;
+  const next = getNextTrack();
+  if (!player.interfaceReady || !playerElement?.classList.contains('is-mini') || !stage || !next?.title) return;
+  if (player.miniNoticeShownFor === player.index) return;
+
+  resetMiniNextNotice();
+  player.miniNoticeShownFor = player.index;
+  playerElements.titleNextLabel.textContent = 'Próxima música';
+  playerElements.titleNextTrack.textContent = next.title;
+
+  requestAnimationFrame(() => stage.classList.add('is-next-label'));
+
+  player.miniNoticeStepTimer = setTimeout(() => {
+    stage.classList.remove('is-next-label');
+    stage.classList.add('is-next-title');
+  }, 900);
+
+  player.miniNoticeHideTimer = setTimeout(() => resetMiniNextNotice(), 4300);
+}
+
 function setPlayerCompact(compact = true) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
   playerElement.classList.toggle('is-mini', compact);
-  if (compact) {
-    playerElements.nextUp?.setAttribute('hidden', '');
-  }
+  if (compact) playerElements.nextUp?.setAttribute('hidden', '');
+  updateNextTrackSection();
 }
 
-function expandPlayer({ auto = false } = {}) {
+function expandPlayer() {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
-  if (player.collapseTimer) {
-    clearTimeout(player.collapseTimer);
-    player.collapseTimer = null;
-  }
+  clearTimeout(player.collapseTimer);
+  resetMiniNextNotice();
   playerElement.classList.remove('is-mini');
-  if (auto) playerElement.classList.add('is-auto-expanded');
+  updateNextTrackSection();
 }
 
 function schedulePlayerCollapse(delay = 2600) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
-  if (player.collapseTimer) clearTimeout(player.collapseTimer);
-  player.collapseTimer = window.setTimeout(() => {
-    player.collapseTimer = null;
+  clearTimeout(player.collapseTimer);
+
+  player.collapseTimer = setTimeout(() => {
     if (playerElement.matches(':hover') || playerElement.matches(':focus-within')) {
       schedulePlayerCollapse(1800);
       return;
     }
-    playerElement.classList.remove('is-auto-expanded');
     setPlayerCompact(true);
   }, delay);
 }
 
-function showNextTrackNotice() {
-  if (player.tracks.length < 2 || player.nextUpShownFor === player.index) return;
-  const next = player.tracks[(player.index + 1) % player.tracks.length];
-  if (!next?.title || !playerElements.nextUp || !playerElements.nextTitle) return;
-  player.nextUpShownFor = player.index;
+function updateNextTrackSection() {
+  const playerElement = document.querySelector('#music-player');
+  const next = getNextTrack();
+  if (!playerElements.nextUp || !playerElements.nextTitle) return;
+
+  if (!next?.title || playerElement?.classList.contains('is-mini')) {
+    playerElements.nextUp.setAttribute('hidden', '');
+    playerElements.nextTitle.textContent = '';
+    return;
+  }
+
   playerElements.nextTitle.textContent = next.title;
   playerElements.nextUp.removeAttribute('hidden');
-  expandPlayer({ auto: true });
-  schedulePlayerCollapse(6500);
-}
-
-function resetNextTrackNotice() {
-  player.nextUpShownFor = null;
-  playerElements.nextUp?.setAttribute('hidden', '');
 }
 
 function updateNavigation() {
   const hasTracks = player.tracks.length > 0;
   const canSkip = player.tracks.length > 1;
+
   [playerElements.prev, playerElements.next].forEach(button => {
     button.disabled = !canSkip;
     button.setAttribute('aria-disabled', String(!canSkip));
   });
+
   playerElements.play.disabled = !hasTracks;
 }
 
 function updatePlayer() {
   const track = player.tracks[player.index];
+
   if (!track) {
-    playerElements.title.textContent = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
-    playerElements.artist.textContent = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
+    const title = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
+    const artist = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
+
+    if (playerElements.titleCurrent) playerElements.titleCurrent.textContent = title;
+    else playerElements.title.textContent = title;
+
+    playerElements.artist.textContent = artist;
     playerElements.play.innerHTML = '<iconify-icon icon="solar:play-linear"></iconify-icon>';
     updateNavigation();
+    updateNextTrackSection();
     return;
   }
 
   const cover = trackCover(track);
   const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
-  playerElements.title.textContent = track.title;
+
+  if (playerElements.titleCurrent) playerElements.titleCurrent.textContent = track.title;
+  else playerElements.title.textContent = track.title;
+
   playerElements.artist.textContent = track.artist || 'SUI UZI';
   playerElements.titleLink.href = officialUrl;
   playerElements.titleLink.classList.add('has-link');
   playerElements.titleLink.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
   playerElements.sourceLink.href = officialUrl;
+
   playerElements.art.innerHTML = cover
     ? `<img src="${escapeHTML(cover)}" alt="" loading="lazy">`
     : '<iconify-icon icon="solar:music-note-3-linear"></iconify-icon>';
+
   playerElements.art.href = officialUrl;
   playerElements.art.classList.add('has-link');
+
   playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
   playerElements.play.setAttribute('aria-label', player.playing ? 'Pausar' : 'Reproduzir');
   playerElements.play.title = player.playing ? 'Pausar' : 'Reproduzir';
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
-  playerElements.duration.textContent = formatTime(track.duration / 1000);
+  playerElements.duration.textContent = formatTime((track.duration || player.duration || 0) / 1000);
+
   if (track.duration) player.duration = track.duration;
+
   updateNavigation();
+  updateNextTrackSection();
   updateMediaSession(track);
 }
 
-function syncCurrentSound() {
+function syncCurrentSound(onDone) {
   if (!player.widget) return;
 
   player.widget.getCurrentSoundIndex(index => {
-    if (Number.isInteger(index) && index >= 0) player.index = index;
+    if (Number.isInteger(index) && index >= 0 && index < player.tracks.length) {
+      player.index = index;
+    }
+
     player.widget.getCurrentSound(sound => {
-      if (!sound) return;
-      const mapped = mapSound(sound);
-      player.tracks[player.index] = { ...(player.tracks[player.index] || {}), ...mapped };
-      player.duration = mapped.duration || player.duration;
-      updatePlayer();
+      if (sound) {
+        const mapped = mapSound(sound);
+        player.tracks[player.index] = { ...(player.tracks[player.index] || {}), ...mapped };
+        player.duration = mapped.duration || player.duration;
+      }
+
+      if (onDone) onDone();
     });
   });
 }
 
 function syncTrackList() {
   if (!player.widget) return;
+
   player.widget.getSounds(sounds => {
     player.error = false;
-    const nextTracks = Array.isArray(sounds) ? sounds.map(mapSound).filter(track => track.src) : [];
-    if (nextTracks.length) {
-      player.tracks = nextTracks;
-      player.index = 0;
-      const first = player.tracks[0];
-      if (first?.duration) player.duration = first.duration;
-    }
-    player.ready = true;
-    updatePlayer();
-    syncCurrentSound();
+    player.tracks = Array.isArray(sounds) ? sounds.map(mapSound).filter(track => track.src) : [];
+    player.index = 0;
+    player.duration = player.tracks[0]?.duration || 0;
+
+    syncCurrentSound(() => {
+      player.ready = true;
+      player.interfaceReady = true;
+      setPlayerLoading(false);
+      setPlayerCompact(true);
+      updatePlayer();
+    });
   });
 }
 
 function selectTrack(index, autoplay = false) {
   if (!player.widget || !player.tracks.length) return;
+
   player.index = (index + player.tracks.length) % player.tracks.length;
-  resetNextTrackNotice();
+  player.miniNoticeShownFor = null;
+  resetMiniNextNotice();
   player.duration = player.tracks[player.index]?.duration || 0;
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
   updatePlayer();
 
   const target = player.index;
+
   if (typeof player.widget.skip === 'function') {
     player.widget.skip(target);
     if (autoplay) player.widget.play();
   } else {
     const track = player.tracks[target];
     if (!track?.src) return;
-    player.widget.load(track.src, { auto_play: autoplay, show_artwork: false, hide_related: true, show_comments: false, show_user: false, show_reposts: false, visual: false });
+
+    player.widget.load(track.src, {
+      auto_play: autoplay,
+      show_artwork: false,
+      hide_related: true,
+      show_comments: false,
+      show_user: false,
+      show_reposts: false,
+      visual: false
+    });
   }
+
   player.playing = autoplay;
   updatePlayer();
 }
@@ -219,15 +327,24 @@ function wakePlayer() {
 function setupPlayer() {
   const frame = document.querySelector('#soundcloud-player');
   if (!frame || !window.SC?.Widget) return;
+
   const playerElement = document.querySelector('#music-player');
+
+  preparePlayerTitleStage();
+  setPlayerLoading(true);
+  setPlayerCompact(true);
+
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
     playerElement.addEventListener(eventName, wakePlayer, { passive: true });
   });
+
   playerElement.addEventListener('mouseenter', () => expandPlayer());
   playerElement.addEventListener('mouseleave', () => schedulePlayerCollapse());
+
   playerElement.addEventListener('focusin', () => expandPlayer());
+
   playerElement.addEventListener('focusout', () => {
-    window.setTimeout(() => {
+    setTimeout(() => {
       if (!playerElement.matches(':focus-within') && !playerElement.matches(':hover')) {
         schedulePlayerCollapse();
       }
@@ -245,52 +362,68 @@ function setupPlayer() {
     show_artwork: 'false',
     visual: 'false'
   });
+
   frame.src = `https://w.soundcloud.com/player/?${params.toString()}`;
   player.widget = window.SC.Widget(frame);
 
   player.widget.bind(window.SC.Widget.Events.READY, () => {
-    player.ready = true;
     player.error = false;
     player.widget.setVolume(Number(playerElements.volume.value) * 100);
-    updatePlayer();
     syncTrackList();
   });
+
   player.widget.bind(window.SC.Widget.Events.PLAY, () => {
     player.playing = true;
-    syncCurrentSound();
-    player.widget.getDuration(duration => {
-      if (Number.isFinite(duration)) player.duration = duration;
-      updatePlayer();
+
+    syncCurrentSound(() => {
+      player.widget.getDuration(duration => {
+        if (Number.isFinite(duration) && duration > 0) player.duration = duration;
+        updatePlayer();
+      });
     });
   });
+
   player.widget.bind(window.SC.Widget.Events.PAUSE, () => {
     player.playing = false;
     updatePlayer();
   });
+
   player.widget.bind(window.SC.Widget.Events.FINISH, () => {
-    if (player.tracks.length > 1) selectTrack(player.index + 1, true);
-    else {
+    if (player.index + 1 < player.tracks.length) {
+      selectTrack(player.index + 1, true);
+    } else {
       player.playing = false;
+      player.miniNoticeShownFor = null;
+      resetMiniNextNotice();
       updatePlayer();
     }
   });
+
   player.widget.bind(window.SC.Widget.Events.PLAY_PROGRESS, data => {
+    if (!player.interfaceReady) return;
+
     const position = Number(data?.currentPosition) || 0;
     const relative = Number(data?.relativePosition) || 0;
+
     if (!player.duration && relative > 0) player.duration = position / relative;
+
     playerElements.current.textContent = formatTime(position / 1000);
     playerElements.duration.textContent = formatTime(player.duration / 1000);
     playerElements.seek.value = Math.max(0, Math.min(100, relative * 100));
 
     const remaining = player.duration - position;
-    if (player.tracks.length > 1 && remaining > 0 && remaining <= 60000) {
-      showNextTrackNotice();
+
+    if (getNextTrack() && remaining > 0 && remaining <= 60000) {
+      showMiniNextNotice();
     }
   });
+
   player.widget.bind(window.SC.Widget.Events.ERROR, () => {
     player.ready = true;
+    player.interfaceReady = true;
     player.error = true;
     player.playing = false;
+    setPlayerLoading(false);
     updatePlayer();
   });
 
@@ -300,12 +433,24 @@ function setupPlayer() {
     if (player.playing) player.widget.pause();
     else player.widget.play();
   });
-  playerElements.prev.addEventListener('click', () => { wakePlayer(); selectTrack(player.index - 1, true); });
-  playerElements.next.addEventListener('click', () => { wakePlayer(); selectTrack(player.index + 1, true); });
+
+  playerElements.prev.addEventListener('click', () => {
+    wakePlayer();
+    selectTrack(player.index - 1, true);
+  });
+
+  playerElements.next.addEventListener('click', () => {
+    wakePlayer();
+    selectTrack(player.index + 1, true);
+  });
+
   playerElements.seek.addEventListener('input', () => {
     wakePlayer();
-    if (player.widget && player.duration) player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
+    if (player.widget && player.duration) {
+      player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
+    }
   });
+
   playerElements.volume.addEventListener('input', () => {
     wakePlayer();
     if (player.widget) player.widget.setVolume(Number(playerElements.volume.value) * 100);
@@ -327,42 +472,57 @@ function editDistance(a, b) {
   if (a === b) return 0;
   if (!a) return b.length;
   if (!b) return a.length;
+
   const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+
   for (let i = 1; i <= a.length; i++) {
-    let prev = row[0]; row[0] = i;
+    let prev = row[0];
+    row[0] = i;
+
     for (let j = 1; j <= b.length; j++) {
       const temp = row[j];
       row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i-1] === b[j-1] ? 0 : 1));
       prev = temp;
     }
   }
+
   return row[b.length];
 }
 
 function fuzzyScore(query, item) {
   const q = normalize(query);
   if (!q) return 0;
+
   const title = normalize(item.Title);
   const aliases = (item.aliases || []).map(normalize);
   const hay = [title, ...aliases, normalize(item.Description)].filter(Boolean);
   let best = 0;
+
   for (const text of hay) {
     if (text === q) best = Math.max(best, 1.0);
     if (text.includes(q)) best = Math.max(best, 0.92 - Math.min(.2, (text.length-q.length)/500));
+
     for (const word of text.split(/\s+/)) {
       const d = editDistance(q, word);
       const score = 1 - d / Math.max(q.length, word.length, 1);
       best = Math.max(best, score * (text === title ? 0.98 : 0.86));
     }
   }
+
   const parts = q.split(/\s+/).filter(Boolean);
+
   if (parts.length > 1) {
     let matched = 0;
+
     for (const part of parts) {
-      if (hay.some(t => t.includes(part) || t.split(/\s+/).some(w => 1 - editDistance(part,w)/Math.max(part.length,w.length,1) > .62))) matched++;
+      if (hay.some(t => t.includes(part) || t.split(/\s+/).some(w => 1 - editDistance(part,w)/Math.max(part.length,w.length,1) > .62))) {
+        matched++;
+      }
     }
+
     best = Math.max(best, (matched / parts.length) * .85);
   }
+
   return best;
 }
 
@@ -379,10 +539,15 @@ function escapeHTML(s) {
 function logoMarkup(source) {
   const value = String(source ?? '').trim();
   if (!value) return '';
-  if (/^https?:\/\//i.test(value)) return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
+
+  if (/^https?:\/\//i.test(value)) {
+    return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
+  }
+
   const svg = value.startsWith('<svg')
     ? value.replace(/currentColor/gi, '#fff')
     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 66.145831 61.515624"><path d="${escapeHTML(value)}" fill="#fff"></path></svg>`;
+
   const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   return `<img class="card-logo" src="${escapeHTML(dataUri)}" alt="" loading="lazy">`;
 }
@@ -405,24 +570,60 @@ function markdownHTML(value) {
   let list = false;
   let code = false;
   let codeLines = [];
-  const closeList = () => { if (list) { output.push('</ul>'); list = false; } };
+
+  const closeList = () => {
+    if (list) {
+      output.push('</ul>');
+      list = false;
+    }
+  };
+
   for (const line of lines) {
     if (line.trim().startsWith('```')) {
-      if (code) { output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`); codeLines = []; }
+      if (code) {
+        output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
+        codeLines = [];
+      }
+
       code = !code;
       closeList();
       continue;
     }
-    if (code) { codeLines.push(line); continue; }
+
+    if (code) {
+      codeLines.push(line);
+      continue;
+    }
+
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
     const bullet = line.match(/^\s*[-*]\s+(.+)$/);
-    if (heading) { closeList(); output.push(`<h${heading[1].length}>${markdownInline(heading[2])}</h${heading[1].length}>`); continue; }
-    if (bullet) { if (!list) { output.push('<ul>'); list = true; } output.push(`<li>${markdownInline(bullet[1])}</li>`); continue; }
+
+    if (heading) {
+      closeList();
+      output.push(`<h${heading[1].length}>${markdownInline(heading[2])}</h${heading[1].length}>`);
+      continue;
+    }
+
+    if (bullet) {
+      if (!list) {
+        output.push('<ul>');
+        list = true;
+      }
+
+      output.push(`<li>${markdownInline(bullet[1])}</li>`);
+      continue;
+    }
+
     closeList();
-    if (line.trim()) output.push(`<p>${markdownInline(line)}</p>`);
+
+    if (line.trim()) {
+      output.push(`<p>${markdownInline(line)}</p>`);
+    }
   }
+
   if (code) output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
   closeList();
+
   return output.join('');
 }
 
@@ -443,14 +644,25 @@ function categoryList() {
 
 function filteredItems() {
   let arr = state.items.slice();
+
   if (state.category !== 'TODOS') arr = arr.filter(i => i.Category === state.category);
-  if (state.query.trim()) arr = arr.map(i => ({i, score: fuzzyScore(state.query, i)})).filter(x => x.score >= .48).sort((a,b)=>b.score-a.score).map(x=>x.i);
-  else arr.sort((a,b) => (a.Title||'').localeCompare(b.Title||'', 'pt-BR'));
+
+  if (state.query.trim()) {
+    arr = arr
+      .map(i => ({i, score: fuzzyScore(state.query, i)}))
+      .filter(x => x.score >= .48)
+      .sort((a,b) => b.score-a.score)
+      .map(x => x.i);
+  } else {
+    arr.sort((a,b) => (a.Title||'').localeCompare(b.Title||'', 'pt-BR'));
+  }
+
   return arr;
 }
 
 function renderHome() {
   const items = filteredItems();
+
   app.innerHTML = `
     <section class="hero">
       <div class="hero-copy">
@@ -472,8 +684,18 @@ function renderHome() {
     </section>`;
 
   const input = document.querySelector('#search');
-  input.addEventListener('input', e => { state.query = e.target.value; renderHome(); document.querySelector('#search')?.focus(); document.querySelector('#search')?.setSelectionRange(state.query.length,state.query.length); });
-  document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{state.category=b.dataset.cat; renderHome();}));
+
+  input.addEventListener('input', e => {
+    state.query = e.target.value;
+    renderHome();
+    document.querySelector('#search')?.focus();
+    document.querySelector('#search')?.setSelectionRange(state.query.length,state.query.length);
+  });
+
+  document.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => {
+    state.category = b.dataset.cat;
+    renderHome();
+  }));
 }
 
 function platformMap() {
@@ -508,7 +730,9 @@ function platformBadges(platforms) {
   const values = Array.isArray(platforms) ? platforms : (typeof platforms === 'string' ? platforms.split(/[\n,;]+/) : []);
   const unique = [...new Set(values.map(value => normalizePlatformKey(value)).filter(Boolean))];
   if (!unique.length) return '';
+
   const map = platformMap();
+
   return unique.map(key => {
     const meta = map[key] || { label: key, icon: 'mdi:circle-medium' };
     return `<span class="platform-badge"><iconify-icon icon="${meta.icon}" aria-hidden="true"></iconify-icon><span>${escapeHTML(meta.label)}</span></span>`;
@@ -523,6 +747,7 @@ function cardDescriptionHTML(value) {
 function cardHTML(item) {
   const banner = item.Banner || item.banner || (Array.isArray(item.Image) ? item.Image[0] : item.Image);
   const logo = item.Logo || item.logo;
+
   return `<a class="card ${banner ? 'has-banner' : ''}" href="#/item/${encodeURIComponent(item.slug)}">
     ${banner ? `<div class="card-media"><img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy"></div>` : ''}
     <div class="card-content">
@@ -540,6 +765,7 @@ function cardHTML(item) {
 function marqueeBar(type, text, extraText) {
   const cls = type === 'warn' ? 'warn-bar' : type === 'info' ? 'info-bar' : 'removed-bar';
   const icon = type === 'warn' ? 'solar:danger-triangle-linear' : type === 'info' ? 'solar:info-circle-linear' : 'solar:close-circle-linear';
+
   return `<div class="dynamic-bar ${cls}">
     <button data-expand="${type}"><div class="marquee-row"><iconify-icon class="notice-icon" icon="${icon}" aria-hidden="true"></iconify-icon><div class="marquee-clip"><div class="marquee-track" data-marquee><div class="marquee-group"><span>${escapeHTML(text)}</span></div></div></div></div></button>
     ${extraText ? `<div class="expand" id="expand-${type}"><div class="expand-inner markdown">${markdownHTML(extraText)}</div></div>` : ''}
@@ -549,6 +775,7 @@ function marqueeBar(type, text, extraText) {
 function detailBarWithFlip(type, shortText, longText) {
   const cls = type === 'warn' ? 'warn-bar' : 'info-bar';
   const icon = type === 'warn' ? 'solar:danger-triangle-linear' : type === 'guia' ? 'solar:book-2-linear' : 'solar:info-circle-linear';
+
   return `<div class="dynamic-bar ${cls}">
     <button data-expand="${type}"><div class="marquee-row"><iconify-icon class="notice-icon" icon="${icon}" aria-hidden="true"></iconify-icon><span class="notice-copy" data-short="${escapeHTML(shortText)}" data-long="${escapeHTML(longText)}">${escapeHTML(shortText)}</span></div></button>
     <div class="expand" id="expand-${type}"><div class="expand-inner markdown">${markdownHTML(longText)}</div></div>
@@ -564,9 +791,16 @@ function renderLoading() {
 
 async function renderDetail(slug) {
   const meta = state.items.find(i=>i.slug===slug);
-  if (!meta) { renderError('404'); return; }
+
+  if (!meta) {
+    renderError('404');
+    return;
+  }
+
   renderLoading();
+
   let item;
+
   try {
     const res = await fetch(`data/items/${encodeURIComponent(meta.file)}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('item');
@@ -584,7 +818,9 @@ async function renderDetail(slug) {
   const imageArray = Array.isArray(item.Image) ? item.Image : (item.Image ? [item.Image] : []);
   const buttonLinks = Array.isArray(item.ButtonLink) ? item.ButtonLink : (item.ButtonLink ? [item.ButtonLink] : []);
 
-  const detailsMeta = item.Category || item.Platforms ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformBadges(item.Platforms) ? `<div class="detail-platforms">${platformBadges(item.Platforms)}</div>` : ''}</div>` : '';
+  const detailsMeta = item.Category || item.Platforms
+    ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformBadges(item.Platforms) ? `<div class="detail-platforms">${platformBadges(item.Platforms)}</div>` : ''}</div>`
+    : '';
 
   let html = `<div class="detail-wrap">
     <a class="back" href="#/"><iconify-icon icon="solar:arrow-left-linear" aria-hidden="true"></iconify-icon> VOLTAR AO CATÁLOGO</a>
@@ -608,51 +844,63 @@ async function renderDetail(slug) {
       </div>
     </article>
   </div>`;
+
   app.innerHTML = html;
   wireBars();
 }
 
 function wireBars() {
   document.querySelectorAll('[data-expand]').forEach(btn => {
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', () => {
       const key = btn.dataset.expand;
       const target = document.querySelector(`#expand-${key}`);
       if (!target) return;
+
       target.classList.toggle('open');
+
       const bar = target.closest('.dynamic-bar');
       if (bar) bar.classList.toggle('is-open', target.classList.contains('open'));
     });
   });
+
   document.querySelectorAll('[data-marquee]').forEach(track => {
     const clip = track.closest('.marquee-clip');
     const group = track.querySelector('.marquee-group');
     if (!clip || !group) return;
+
     requestAnimationFrame(() => {
       while (group.scrollWidth < clip.clientWidth + 100) {
         group.insertAdjacentHTML('beforeend', group.firstElementChild.outerHTML);
       }
+
       const duplicate = group.cloneNode(true);
       duplicate.setAttribute('aria-hidden', 'true');
       track.append(duplicate);
       track.style.setProperty('--marquee-duration', `${Math.max(8, group.scrollWidth / 42)}s`);
     });
   });
+
   document.querySelectorAll('.notice-copy').forEach(copy => {
     let showingLong = false;
     const fadeDuration = 250;
+
     setInterval(() => {
       const bar = copy.closest('.dynamic-bar');
       if (!bar || bar.classList.contains('is-open')) return;
+
       copy.classList.add('notice-exit');
+
       setTimeout(() => {
         if (bar.classList.contains('is-open')) {
           copy.classList.remove('notice-exit');
           return;
         }
+
         showingLong = !showingLong;
         copy.textContent = showingLong ? copy.dataset.long : copy.dataset.short;
         copy.classList.add('notice-prep', 'notice-enter');
         copy.classList.remove('notice-exit');
+
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             copy.classList.remove('notice-prep');
@@ -666,13 +914,31 @@ function wireBars() {
 
 async function route() {
   const hash = location.hash || '#/';
+
   if (hash === '#/' || hash === '#') return renderHome();
+
   const match = hash.match(/^#\/item\/(.+)$/);
   if (match) return renderDetail(decodeURIComponent(match[1]));
+
   return renderHome();
 }
 
 window.addEventListener('hashchange', route);
-window.addEventListener('keydown', e=> { if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k') { e.preventDefault(); document.querySelector('#search')?.focus(); } });
 
-(async()=>{ try { renderLoading(); setupPlayer(); await loadCatalog(); await route(); } catch { renderError('500'); } })();
+window.addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k') {
+    e.preventDefault();
+    document.querySelector('#search')?.focus();
+  }
+});
+
+(async()=>{
+  try {
+    renderLoading();
+    setupPlayer();
+    await loadCatalog();
+    await route();
+  } catch {
+    renderError('500');
+  }
+})();
