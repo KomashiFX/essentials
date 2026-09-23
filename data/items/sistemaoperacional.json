@@ -3,11 +3,11 @@
   "Title": "Sistemas Operacionais",
   "Description": "Veja `.iso` limpas para baixar e usar caso queira fazer um hard reset.",
   "Category": "Ferramentas",
-  "Logo": "https://logomaker.designfreelogoonline.com/media/productdesigner/logo/resized/1281_computer-03.png",
+  "Logo": "https://api.iconify.design/ic:baseline-computer.svg",
   "Banner": "https://wallpapercave.com/wp/wp5515897.jpg",
   "text": "Sistemas operacionais que você pode usar para atualizar ou formatar seu PC com uma imagem limpa, escolha abaixo qual que você vai querer usar.\n\n# Sistema Windows\n- **[Windows 11 Consumer 25H2](https://zerofs.link/f/S7AspNC/)** - 26200.8875 (Julho 2026)\n- **[Windows 10 Consumer 22H2](https://buzzheavier.com/4xdedb8hiuat)** - 19045.6456 (Outubro 2025)\n\n**Precisa ativar o windows? Use isso no Powershell**:\n```ps1\nirm https://get.activated.win | iex\n```\n# Sistemas Linux\n- **[Linux Mint Cinnamon 22.3](https://www.linuxmint.com/torrents/linuxmint-22.3-cinnamon-64bit.iso.torrent)** (Arquivo .torrent)\n- **[Ubuntu Desktop 26.04 LTS](https://ubuntu.com/download/desktop)** (Sistema +/- Complexo)\n- **[Arch Linux](https://archlinux.org/releng/releases/2026.07.01/torrent/)** (Arquivo .torrent｜Sistema Complexo)\n- **[Zorin OS 18.1 Core](https://zorin.com/os/download/)** (Mais parecido com Windows, só que melhor.)\nUse **[balenaEtcher](https://etcher.balena.io/)** ou use **[Ventoy](https://www.ventoy.net/en/download.html)** se quiser voltar ao Windows.",
   "removed": "CONFIGURAÇÃO EXTREMA",
-  "removedtxt": "Cuidado, fazer isto sem alguma noção ou tutorial do que você está fazendo pode trazer problemas, faça pesquisas tanto na internet quanto para PC, lembre-se que isso varia de sistema a sistema então confirme o que está fazendo antes de sair mudando tudo.",
+  "removedtxt": "Cuidado, fazer isto sem alguma noção ou tutorial do que você está fazendo pode trazer problemas, faça pesquisas para evitar problemas, lembre-se que isso varia de sistema a sistema então confirme o que está fazendo antes de sair mudando tudo.",
   "Platforms": [
     "linux",
     "pc"
