@@ -3,8 +3,6 @@
   "Title": "Nora",
   "Description": "Player de música offline com design moderno.",
   "Category": "Música",
-  "Logo": "https://noramusic.netlify.app/assets/nora-logo-CO31figH.webp",
-  "Banner": "https://raw.githubusercontent.com/Sandakan/Nora/refs/tags/v3.1.0-stable/resources/other/artwork%200.webp",
   "text": "Nora é um player de música insano de bonito, então tipo assim, se você não quer essa coisa feia do windows esse app é altamente recomendado, e ele não só toca música, ele tem suporte a metadata online, assim você consegue por fotos, arrumar os nomes dos arquivos e etc de seus arquivos ao invés de ter somente aquele `musica-ytdownload.mp3` sem foto e foto feioso, e não só isso como ele também tem suporte a LastFM e integração com Discord RPC.",
   "info": "Informações da página de Download",
   "infotxt": "Pode ser um pouco confuso mas quando estiver navegando entre as releases baixe a versão que desejar (**recomendado release**) e depois clique em **> Assets** para abrir toda a pagina e ver todos os arquivos para baixar o Nora.",
@@ -16,6 +14,5 @@
     "nora"
   ],
   "ButtonLink": "https://github.com/Sandakan/Nora/releases",
-  "ButtonLabel": "Baixar Nora",
-  "Image": "https://raw.githubusercontent.com/Sandakan/Nora/v3.1.0-stable/resources/other/nora_logo_banner.webp"
+  "ButtonLabel": "Baixar Nora"
 }

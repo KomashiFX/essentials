@@ -3,8 +3,6 @@
   "Title": "OpenNOW",
   "Description": "Serviço de Streaming para substituir o GeForce NOW",
   "Category": "Streaming",
-  "Logo": "https://raw.githubusercontent.com/OpenCloudGaming/OpenNOW/refs/heads/main/opennow-qt/res/brand/opennow-mark.png",
-  "Banner": "https://raw.githubusercontent.com/OpenCloudGaming/OpenNOW/refs/heads/main/docs/assets/readme/desktop-home.webp",
   "text": "OpenNOW é um cliente alternativo do **GeForce NOW**, com ele você pode jogar os mesmos jogos da biblioteca do **GeForce NOW** sem telemetria nenhuma e com algumas melhorias (até mesmo visuais). Se interessou? Escolha a versão que deseja baixar no botão de download.",
   "removed": "INFORMAÇÕES SOBRE BANIMENTO",
   "removedtxt": "OpenNOW não quebra nenhuma regra do GeForce NOW, você pode usar com tranquilidade.",

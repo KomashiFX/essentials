@@ -1,0 +1,12 @@
+{
+  "slug": "pcsx2",
+  "Title": "PCSX2",
+  "Description": "Melhor emulador de PlayStation 2 que existe",
+  "Category": "Emuladores",
+  "text": "A descrição já diz tudo, com 20+ anos de idade PCSX2 está sempre sendo atualizado e mantido vivo, e domina todos os outros emuladores que existe, então pegue sua BIOS no VIMMs Lair e se divirta.",
+  "guia": "ONDE BAIXAR JOGOS?",
+  "guiatxt": "Bom, você pode baixar nesses sites aqui:\n- [Minerva Archive](https://minerva-archive.org/browse/RetroAchievements/RA%20-%20Sony%20Playstation%202/)\n- [BlueRoms](https://www.blueroms.ws/ps2)\n- [CDRomance](https://cdromance.org/ps2-iso/)\n- [OldGames](https://oldgamesdownload.com/platform/playstation-2/)\n- [ROMsPortuguês](https://romsportugues.com/category/playstation-2-ps2/)\n- [ConsoleROMs](https://www.consoleroms.com/roms/ps2)\nAlguns deles é recomendado que você tenha [qBitorrent](https://www.qbittorrent.org/download) ou [Free Download Manager](https://komashifx.github.io/essentials/#/item/fdm)",
+  "Platforms": [
+    "pc"
+  ]
+}

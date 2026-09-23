@@ -4,8 +4,6 @@
   "Description": "Todos os Visual C++ essenciais para jogos e programas rodarem sem problemas.",
   "Category": "Dependências",
   "Platforms": ["pc"],
-  "Logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Visual_Studio_Icon_2022.svg/1280px-Visual_Studio_Icon_2022.svg.png",
-  "Banner": "https://wallpapercave.com/wp/wp2633259.jpg",
   "text": "A descrição já diz tudo, você baixa isso e vários jogos e programas que depender de algum desses programas vai funcionar perfeitamente sem problemas algum.",
   "info": "Informação adicional",
   "infotxt": "Isso não inclui .NET, apenas Visual C++, caso queira baixar .NET [aperte aqui](https://dotnet.microsoft.com/pt-br/download).",

@@ -3,8 +3,6 @@
   "Title": "Music Presence",
   "Description": "Ferramenta de Rich Presence para suas músicas",
   "Category": "Ferramentas",
-  "logo": "https://cdn.discordapp.com/icons/1224509771068211292/deafde046a6b42d123f44b9b0bb04c49.png?size=256",
-  "banner": "https://cdn.discordapp.com/discovery-splashes/1224509771068211292/7d4e56334b4aa4736fbdfd4e794addb7.jpg?size=2048&format=auto",
   "text": "Como já diz na descrição é uma ferramenta de Rich Presence do Discord para suas músicas, tudo que você ouvir e o app conseguir se conectar ele vai mostrar no status do Discord e não só isso como também ele vai acompanhando tanto site quanto apps em tempo real, você pode personalizar de sua forma também.",
   "info": "Rich Presence animada (GIFs)",
   "infotxt": "As Rich Presence animadas com gifs são apenas para sites que possuem suporte a este tipo de conteúdo, por exemplo Apple Music.",

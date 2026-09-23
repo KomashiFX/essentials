@@ -495,7 +495,7 @@ async function renderDetail(slug) {
   try {
     const res = await fetch(`data/items/${encodeURIComponent(meta.file)}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('item');
-    item = await res.json();
+    item = { ...meta, ...await res.json() };
   } catch {
     renderError('500');
     return;
