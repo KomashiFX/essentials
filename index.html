@@ -17,7 +17,7 @@
 
   <main id="app" aria-live="polite"></main>
 
-  <section class="music-player" id="music-player" aria-label="Player de música">
+  <section class="music-player is-mini" id="music-player" aria-label="Player de música">
     <div class="player-track" id="player-track">
       <a class="player-art" id="player-art" aria-label="Capa da música atual" rel="noopener" target="_blank"><iconify-icon icon="solar:music-note-3-linear"></iconify-icon></a>
       <div class="player-copy">
@@ -26,6 +26,10 @@
         <a class="player-source" id="player-source-link" href="https://soundcloud.com/sui_uzi" target="_blank" rel="noopener">
           <iconify-icon icon="simple-icons:soundcloud" aria-hidden="true"></iconify-icon><span>SoundCloud</span>
         </a>
+        <div class="player-next-up" id="player-next-up" aria-live="polite" hidden>
+          <small>PRÓXIMA MÚSICA</small>
+          <strong id="player-next-title"></strong>
+        </div>
       </div>
     </div>
     <div class="player-controls" aria-label="Controles de reprodução">
@@ -50,7 +54,7 @@
     <span class="copyright">© 2026 KomashiOFC</span>
   </footer>
 
-  <script src="data/items/index.js?v=07620805be1c"></script>
+  <script src="data/items/index.js?v=73964b596203"></script>
   <script src="https://w.soundcloud.com/player/api.js"></script>
   <script src="app.js?v=player-redesign-1"></script>
 </body>

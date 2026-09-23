@@ -7,7 +7,9 @@ const player = {
   ready: false,
   playing: false,
   duration: 0,
-  error: false
+  error: false,
+  nextUpShownFor: null,
+  collapseTimer: null
 };
 const app = document.querySelector('#app');
 
@@ -23,7 +25,9 @@ const playerElements = {
   seek: document.querySelector('#player-seek'),
   current: document.querySelector('#player-current'),
   duration: document.querySelector('#player-duration'),
-  volume: document.querySelector('#player-volume')
+  volume: document.querySelector('#player-volume'),
+  nextUp: document.querySelector('#player-next-up'),
+  nextTitle: document.querySelector('#player-next-title')
 };
 
 function formatTime(seconds) {
@@ -56,6 +60,57 @@ function updateMediaSession(track) {
     album: 'SUI UZI • SoundCloud',
     artwork: cover ? [{ src: cover, sizes: '512x512', type: 'image/jpeg' }] : []
   });
+}
+
+function setPlayerCompact(compact = true) {
+  const playerElement = document.querySelector('#music-player');
+  if (!playerElement) return;
+  playerElement.classList.toggle('is-mini', compact);
+  if (compact) {
+    playerElements.nextUp?.setAttribute('hidden', '');
+  }
+}
+
+function expandPlayer({ auto = false } = {}) {
+  const playerElement = document.querySelector('#music-player');
+  if (!playerElement) return;
+  if (player.collapseTimer) {
+    clearTimeout(player.collapseTimer);
+    player.collapseTimer = null;
+  }
+  playerElement.classList.remove('is-mini');
+  if (auto) playerElement.classList.add('is-auto-expanded');
+}
+
+function schedulePlayerCollapse(delay = 2600) {
+  const playerElement = document.querySelector('#music-player');
+  if (!playerElement) return;
+  if (player.collapseTimer) clearTimeout(player.collapseTimer);
+  player.collapseTimer = window.setTimeout(() => {
+    player.collapseTimer = null;
+    if (playerElement.matches(':hover') || playerElement.matches(':focus-within')) {
+      schedulePlayerCollapse(1800);
+      return;
+    }
+    playerElement.classList.remove('is-auto-expanded');
+    setPlayerCompact(true);
+  }, delay);
+}
+
+function showNextTrackNotice() {
+  if (player.tracks.length < 2 || player.nextUpShownFor === player.index) return;
+  const next = player.tracks[(player.index + 1) % player.tracks.length];
+  if (!next?.title || !playerElements.nextUp || !playerElements.nextTitle) return;
+  player.nextUpShownFor = player.index;
+  playerElements.nextTitle.textContent = next.title;
+  playerElements.nextUp.removeAttribute('hidden');
+  expandPlayer({ auto: true });
+  schedulePlayerCollapse(6500);
+}
+
+function resetNextTrackNotice() {
+  player.nextUpShownFor = null;
+  playerElements.nextUp?.setAttribute('hidden', '');
 }
 
 function updateNavigation() {
@@ -137,6 +192,7 @@ function syncTrackList() {
 function selectTrack(index, autoplay = false) {
   if (!player.widget || !player.tracks.length) return;
   player.index = (index + player.tracks.length) % player.tracks.length;
+  resetNextTrackNotice();
   player.duration = player.tracks[player.index]?.duration || 0;
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
@@ -156,13 +212,27 @@ function selectTrack(index, autoplay = false) {
 }
 
 function wakePlayer() {
+  expandPlayer();
+  schedulePlayerCollapse(3200);
 }
 
 function setupPlayer() {
   const frame = document.querySelector('#soundcloud-player');
   if (!frame || !window.SC?.Widget) return;
   const playerElement = document.querySelector('#music-player');
-  ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => playerElement.addEventListener(eventName, wakePlayer, { passive: true }));
+  ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
+    playerElement.addEventListener(eventName, wakePlayer, { passive: true });
+  });
+  playerElement.addEventListener('mouseenter', () => expandPlayer());
+  playerElement.addEventListener('mouseleave', () => schedulePlayerCollapse());
+  playerElement.addEventListener('focusin', () => expandPlayer());
+  playerElement.addEventListener('focusout', () => {
+    window.setTimeout(() => {
+      if (!playerElement.matches(':focus-within') && !playerElement.matches(':hover')) {
+        schedulePlayerCollapse();
+      }
+    }, 50);
+  });
 
   const params = new URLSearchParams({
     url: SOUNDCLOUD_PROFILE_URL,
@@ -211,6 +281,11 @@ function setupPlayer() {
     playerElements.current.textContent = formatTime(position / 1000);
     playerElements.duration.textContent = formatTime(player.duration / 1000);
     playerElements.seek.value = Math.max(0, Math.min(100, relative * 100));
+
+    const remaining = player.duration - position;
+    if (player.tracks.length > 1 && remaining > 0 && remaining <= 60000) {
+      showNextTrackNotice();
+    }
   });
   player.widget.bind(window.SC.Widget.Events.ERROR, () => {
     player.ready = true;
