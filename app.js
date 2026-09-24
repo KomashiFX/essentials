@@ -14,7 +14,6 @@ const player = {
   collapseTimer: null
 };
 const app = document.querySelector('#app');
-
 const playerElements = {
   art: document.querySelector('#player-art'),
   titleLink: document.querySelector('#player-title-link'),
@@ -34,7 +33,6 @@ const playerElements = {
   titleNextLabel: null,
   titleNextTrack: null
 };
-
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) return '0:00';
   const safe = Math.max(0, Math.floor(seconds));
@@ -44,7 +42,6 @@ function formatTime(seconds) {
 function trackCover(track) {
   return track?.cover || '';
 }
-
 function mapSound(sound) {
   return {
     title: sound?.title || 'Faixa sem título',
@@ -55,7 +52,6 @@ function mapSound(sound) {
     duration: Number.isFinite(sound?.duration) ? sound.duration : 0
   };
 }
-
 function updateMediaSession(track) {
   if (!('mediaSession' in navigator) || !track) return;
   const cover = trackCover(track);
@@ -70,7 +66,6 @@ function updateMediaSession(track) {
 function preparePlayerTitleStage() {
   const title = playerElements.title;
   if (!title || title.dataset.stageReady === 'true') return;
-
   title.dataset.stageReady = 'true';
   title.classList.add('player-title-stage');
   title.innerHTML = `
@@ -78,10 +73,24 @@ function preparePlayerTitleStage() {
     <span class="player-title-next-label"><iconify-icon icon="solar:arrow-right-linear" aria-hidden="true"></iconify-icon><span>Próxima música</span></span>
     <span class="player-title-next-track"></span>
   `;
-
   playerElements.titleCurrent = title.querySelector('.player-title-current');
   playerElements.titleNextLabel = title.querySelector('.player-title-next-label');
   playerElements.titleNextTrack = title.querySelector('.player-title-next-track');
+}
+
+function setPlayerArt(track) {
+  if (!playerElements.art || !track) return;
+
+  const cover = trackCover(track);
+  const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
+
+  playerElements.art.innerHTML = cover
+    ? `<img src="${escapeHTML(cover)}" alt="" loading="lazy">`
+    : '<iconify-icon icon="solar:music-note-3-linear"></iconify-icon>';
+
+  playerElements.art.href = officialUrl;
+  playerElements.art.classList.add('has-link');
+  playerElements.art.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
 }
 
 function resetMiniNextNotice() {
@@ -89,13 +98,23 @@ function resetMiniNextNotice() {
   player.miniNoticeTimer = null;
 
   if (!playerElements.title) return;
-
   playerElements.title.classList.remove(
     'is-next-label',
     'is-next-title',
     'is-returning',
     'no-transition'
   );
+
+  playerElements.art?.classList.remove(
+    'is-next-title',
+    'is-returning',
+    'no-transition'
+  );
+
+  const current = player.tracks[player.index];
+  if (current) {
+    setPlayerArt(current);
+  }
 }
 
 function scheduleMiniNextNotice() {
@@ -107,7 +126,6 @@ function scheduleMiniNextNotice() {
   resetMiniNextNotice();
   player.miniNoticeTrack = player.index;
   player.miniNoticePending = false;
-
   playerElements.titleNextTrack.textContent = next.title;
 
   player.miniNoticeTimer = setTimeout(() => {
@@ -126,6 +144,12 @@ function scheduleMiniNextNotice() {
       playerElements.title.classList.remove('is-next-label');
       playerElements.title.classList.add('is-next-title');
 
+      if (playerElements.art) {
+        playerElements.art.classList.add('is-next-title');
+      }
+
+      setPlayerArt(next);
+
       player.miniNoticeTimer = setTimeout(() => {
         if (!player.playing) {
           resetMiniNextNotice();
@@ -135,11 +159,33 @@ function scheduleMiniNextNotice() {
         playerElements.title.classList.remove('is-next-title');
         playerElements.title.classList.add('is-returning');
 
+        if (playerElements.art) {
+          playerElements.art.classList.remove('is-next-title');
+          playerElements.art.classList.add('is-returning');
+        }
+
+        const current = player.tracks[player.index];
+        if (current) {
+          setPlayerArt(current);
+        }
+
         player.miniNoticeTimer = setTimeout(() => {
           playerElements.title.classList.add('no-transition');
           playerElements.title.classList.remove('is-returning');
+
+          if (playerElements.art) {
+            playerElements.art.classList.add('no-transition');
+            playerElements.art.classList.remove('is-returning');
+          }
+
           void playerElements.title.offsetWidth;
+          if (playerElements.art) void playerElements.art.offsetWidth;
+
           playerElements.title.classList.remove('no-transition');
+
+          if (playerElements.art) {
+            playerElements.art.classList.remove('no-transition');
+          }
         }, 500);
       }, 3450);
     }, 2400);
@@ -149,7 +195,6 @@ function scheduleMiniNextNotice() {
 function setPlayerCompact(compact = true) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
-
   playerElement.classList.toggle('is-mini', compact);
   playerElements.nextUp?.setAttribute('hidden', '');
 }
@@ -166,7 +211,6 @@ function expandPlayer() {
 function schedulePlayerCollapse(delay = 2600) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
-
   clearTimeout(player.collapseTimer);
 
   player.collapseTimer = setTimeout(() => {
@@ -182,7 +226,6 @@ function schedulePlayerCollapse(delay = 2600) {
 function updateNavigation() {
   const hasTracks = player.tracks.length > 0;
   const canSkip = player.tracks.length > 1;
-
   [playerElements.prev, playerElements.next].forEach(button => {
     button.disabled = !canSkip;
     button.setAttribute('aria-disabled', String(!canSkip));
@@ -193,21 +236,18 @@ function updateNavigation() {
 
 function updatePlayer() {
   const track = player.tracks[player.index];
-
   if (!track) {
     const title = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
     const artist = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
 
     if (playerElements.titleCurrent) playerElements.titleCurrent.textContent = title;
     else playerElements.title.textContent = title;
-
     playerElements.artist.textContent = artist;
     playerElements.play.innerHTML = '<iconify-icon icon="solar:play-linear"></iconify-icon>';
     updateNavigation();
     return;
   }
 
-  const cover = trackCover(track);
   const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
 
   if (playerElements.titleCurrent) {
@@ -215,24 +255,17 @@ function updatePlayer() {
   } else {
     playerElements.title.textContent = track.title;
   }
-
   playerElements.artist.textContent = track.artist || 'SUI UZI';
   playerElements.titleLink.href = officialUrl;
   playerElements.titleLink.classList.add('has-link');
   playerElements.titleLink.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
   playerElements.sourceLink.href = officialUrl;
 
-  playerElements.art.innerHTML = cover
-    ? `<img src="${escapeHTML(cover)}" alt="" loading="lazy">`
-    : '<iconify-icon icon="solar:music-note-3-linear"></iconify-icon>';
-
-  playerElements.art.href = officialUrl;
-  playerElements.art.classList.add('has-link');
+  setPlayerArt(track);
 
   playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
   playerElements.play.setAttribute('aria-label', player.playing ? 'Pausar' : 'Reproduzir');
   playerElements.play.title = player.playing ? 'Pausar' : 'Reproduzir';
-
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
   playerElements.duration.textContent = formatTime((track.duration || player.duration || 0) / 1000);
@@ -246,7 +279,6 @@ function updatePlayer() {
 
 function syncCurrentSound(onDone) {
   if (!player.widget) return;
-
   player.widget.getCurrentSoundIndex(index => {
     if (Number.isInteger(index) && index >= 0 && index < player.tracks.length) {
       player.index = index;
@@ -263,7 +295,6 @@ function syncCurrentSound(onDone) {
     });
   });
 }
-
 function syncTrackList() {
   if (!player.widget) return;
 
@@ -282,7 +313,6 @@ function syncTrackList() {
 
 function selectTrack(index, autoplay = false) {
   if (!player.widget || !player.tracks.length) return;
-
   player.index = (index + player.tracks.length) % player.tracks.length;
   player.miniNoticePending = Boolean(player.tracks[player.index + 1]);
   player.miniNoticeTrack = null;
@@ -294,7 +324,6 @@ function selectTrack(index, autoplay = false) {
   updatePlayer();
 
   const target = player.index;
-
   if (typeof player.widget.skip === 'function') {
     player.widget.skip(target);
     if (autoplay) player.widget.play();
@@ -316,7 +345,6 @@ function selectTrack(index, autoplay = false) {
   player.playing = autoplay;
   updatePlayer();
 }
-
 function wakePlayer() {
   expandPlayer();
   schedulePlayerCollapse(3200);
@@ -335,7 +363,6 @@ function setupPlayer() {
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
     playerElement.addEventListener(eventName, wakePlayer, { passive: true });
   });
-
   playerElement.addEventListener('mouseenter', () => expandPlayer());
   playerElement.addEventListener('mouseleave', () => schedulePlayerCollapse());
   playerElement.addEventListener('focusin', () => expandPlayer());
@@ -347,7 +374,6 @@ function setupPlayer() {
       }
     }, 50);
   });
-
   const params = new URLSearchParams({
     url: SOUNDCLOUD_PROFILE_URL,
     color: '#d2f36b',
@@ -362,7 +388,6 @@ function setupPlayer() {
 
   frame.src = `https://w.soundcloud.com/player/?${params.toString()}`;
   player.widget = window.SC.Widget(frame);
-
   player.widget.bind(window.SC.Widget.Events.READY, () => {
     player.error = false;
     player.widget.setVolume(Number(playerElements.volume.value) * 100);
@@ -371,7 +396,6 @@ function setupPlayer() {
 
   player.widget.bind(window.SC.Widget.Events.PLAY, () => {
     player.playing = true;
-
     syncCurrentSound(() => {
       player.widget.getDuration(duration => {
         if (Number.isFinite(duration) && duration > 0) player.duration = duration;
@@ -386,7 +410,6 @@ function setupPlayer() {
     resetMiniNextNotice();
     updatePlayer();
   });
-
   player.widget.bind(window.SC.Widget.Events.FINISH, () => {
     if (player.index + 1 < player.tracks.length) {
       selectTrack(player.index + 1, true);
@@ -401,7 +424,6 @@ function setupPlayer() {
 
   player.widget.bind(window.SC.Widget.Events.PLAY_PROGRESS, data => {
     if (!player.ready) return;
-
     const position = Number(data?.currentPosition) || 0;
     const relative = Number(data?.relativePosition) || 0;
 
@@ -413,7 +435,6 @@ function setupPlayer() {
     playerElements.duration.textContent = formatTime(player.duration / 1000);
     playerElements.seek.value = Math.max(0, Math.min(100, relative * 100));
   });
-
   player.widget.bind(window.SC.Widget.Events.ERROR, () => {
     player.ready = true;
     player.error = true;
@@ -431,7 +452,6 @@ function setupPlayer() {
     if (player.playing) player.widget.pause();
     else player.widget.play();
   });
-
   playerElements.prev.addEventListener('click', () => {
     wakePlayer();
     selectTrack(player.index - 1, true);
@@ -449,7 +469,6 @@ function setupPlayer() {
       player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
     }
   });
-
   playerElements.volume.addEventListener('input', () => {
     wakePlayer();
 
@@ -457,7 +476,6 @@ function setupPlayer() {
       player.widget.setVolume(Number(playerElements.volume.value) * 100);
     }
   });
-
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => player.widget?.play());
     navigator.mediaSession.setActionHandler('pause', () => player.widget?.pause());
@@ -465,7 +483,6 @@ function setupPlayer() {
     navigator.mediaSession.setActionHandler('nexttrack', () => selectTrack(player.index + 1, true));
   }
 }
-
 const normalize = (value) => String(value ?? '')
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   .toLowerCase().replace(/[^a-z0-9\s]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -479,7 +496,6 @@ function editDistance(a, b) {
   for (let i = 1; i <= a.length; i++) {
     let prev = row[0];
     row[0] = i;
-
     for (let j = 1; j <= b.length; j++) {
       const temp = row[j];
       row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i-1] === b[j-1] ? 0 : 1));
@@ -498,7 +514,6 @@ function fuzzyScore(query, item) {
   const aliases = (item.aliases || []).map(normalize);
   const hay = [title, ...aliases, normalize(item.Description)].filter(Boolean);
   let best = 0;
-
   for (const text of hay) {
     if (text === q) best = Math.max(best, 1.0);
     if (text.includes(q)) best = Math.max(best, 0.92 - Math.min(.2, (text.length-q.length)/500));
@@ -514,7 +529,6 @@ function fuzzyScore(query, item) {
 
   if (parts.length > 1) {
     let matched = 0;
-
     for (const part of parts) {
       if (hay.some(t => t.includes(part) || t.split(/\s+/).some(w => 1 - editDistance(part,w)/Math.max(part.length,w.length,1) > .62))) matched++;
     }
@@ -530,7 +544,6 @@ async function loadCatalog() {
   if (!Array.isArray(catalog)) throw new Error('items');
   state.items = catalog;
 }
-
 function escapeHTML(s) {
   return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 }
@@ -542,7 +555,6 @@ function logoMarkup(source) {
   if (/^https?:\/\//i.test(value)) {
     return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
   }
-
   const svg = value.startsWith('<svg')
     ? value.replace(/currentColor/gi, '#fff')
     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 66.145831 61.515624"><path d="${escapeHTML(value)}" fill="#fff"></path></svg>`;
@@ -550,7 +562,6 @@ function logoMarkup(source) {
   const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   return `<img class="card-logo" src="${escapeHTML(dataUri)}" alt="" loading="lazy">`;
 }
-
 function markdownInline(value) {
   let text = escapeHTML(value);
   text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -562,7 +573,6 @@ function markdownInline(value) {
   text = text.replace(/_([^_]+)_/g, '<em>$1</em>');
   return text;
 }
-
 function markdownHTML(value) {
   const lines = String(value ?? '').replace(/\r/g, '').split('\n');
   const output = [];
@@ -583,7 +593,6 @@ function markdownHTML(value) {
         output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
         codeLines = [];
       }
-
       code = !code;
       closeList();
       continue;
@@ -608,7 +617,6 @@ function markdownHTML(value) {
         output.push('<ul>');
         list = true;
       }
-
       output.push(`<li>${markdownInline(bullet[1])}</li>`);
       continue;
     }
@@ -623,7 +631,6 @@ function markdownHTML(value) {
 
   return output.join('');
 }
-
 function renderError(code = '500') {
   app.innerHTML = `<section class="error-screen" role="alert">
     <div class="error-icon" aria-hidden="true"><iconify-icon icon="solar:danger-triangle-bold"></iconify-icon></div>
@@ -633,7 +640,6 @@ function renderError(code = '500') {
     <a class="error-back" href="#/">Voltar ao catálogo</a>
   </section>`;
 }
-
 function categoryList() {
   const cats = [...new Set(state.items.map(i => i.Category).filter(Boolean))].sort();
   return ['TODOS', ...cats];
@@ -643,7 +649,6 @@ function filteredItems() {
   let arr = state.items.slice();
 
   if (state.category !== 'TODOS') arr = arr.filter(i => i.Category === state.category);
-
   if (state.query.trim()) {
     arr = arr.map(i => ({i, score: fuzzyScore(state.query, i)})).filter(x => x.score >= .48).sort((a,b)=>b.score-a.score).map(x=>x.i);
   } else {
@@ -655,7 +660,6 @@ function filteredItems() {
 
 function renderHome() {
   const items = filteredItems();
-
   app.innerHTML = `
     <section class="hero">
       <div class="hero-copy">
@@ -675,7 +679,6 @@ function renderHome() {
     <section class="grid">
       ${items.length ? items.map(cardHTML).join('') : '<div class="empty">Nenhum resultado encontrado.</div>'}
     </section>`;
-
   const input = document.querySelector('#search');
 
   input.addEventListener('input', e => {
@@ -690,7 +693,6 @@ function renderHome() {
     renderHome();
   }));
 }
-
 function platformMap() {
   return {
     pc: { label: 'PC', icon: 'mdi:desktop-classic' },
@@ -704,7 +706,6 @@ function platformMap() {
     outros: { label: 'Outros', icon: 'mdi:devices' }
   };
 }
-
 function normalizePlatformKey(value) {
   const key = String(value ?? '').trim().toLowerCase();
   if (!key) return '';
@@ -718,14 +719,12 @@ function normalizePlatformKey(value) {
   if (key.includes('tablet')) return 'tablet';
   return 'outros';
 }
-
 function platformBadges(platforms) {
   const values = Array.isArray(platforms) ? platforms : (typeof platforms === 'string' ? platforms.split(/[\n,;]+/) : []);
   const unique = [...new Set(values.map(value => normalizePlatformKey(value)).filter(Boolean))];
   if (!unique.length) return '';
 
   const map = platformMap();
-
   return unique.map(key => {
     const meta = map[key] || { label: key, icon: 'mdi:circle-medium' };
     return `<span class="platform-badge"><iconify-icon icon="${meta.icon}" aria-hidden="true"></iconify-icon><span>${escapeHTML(meta.label)}</span></span>`;
@@ -736,11 +735,9 @@ function cardDescriptionHTML(value) {
   const withoutLinks = String(value ?? '').replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/gi, '$1');
   return markdownHTML(withoutLinks);
 }
-
 function cardHTML(item) {
   const banner = item.Banner || item.banner || (Array.isArray(item.Image) ? item.Image[0] : item.Image);
   const logo = item.Logo || item.logo;
-
   return `<a class="card ${banner ? 'has-banner' : ''}" href="#/item/${encodeURIComponent(item.slug)}">
     ${banner ? `<div class="card-media"><img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy"></div>` : ''}
     <div class="card-content">
@@ -754,27 +751,22 @@ function cardHTML(item) {
     <div class="card-foot"><span>ABRIR</span><iconify-icon class="arrow" icon="solar:arrow-up-right-linear" aria-hidden="true"></iconify-icon></div>
   </a>`;
 }
-
 function marqueeBar(type, text, extraText) {
   const cls = type === 'warn' ? 'warn-bar' : type === 'info' ? 'info-bar' : 'removed-bar';
   const icon = type === 'warn' ? 'solar:danger-triangle-linear' : type === 'info' ? 'solar:info-circle-linear' : 'solar:close-circle-linear';
-
   return `<div class="dynamic-bar ${cls}">
     <button data-expand="${type}"><div class="marquee-row"><iconify-icon class="notice-icon" icon="${icon}" aria-hidden="true"></iconify-icon><div class="marquee-clip"><div class="marquee-track" data-marquee><div class="marquee-group"><span>${escapeHTML(text)}</span></div></div></div></div></button>
     ${extraText ? `<div class="expand" id="expand-${type}"><div class="expand-inner markdown">${markdownHTML(extraText)}</div></div>` : ''}
   </div>`;
 }
-
 function detailBarWithFlip(type, shortText, longText) {
   const cls = type === 'warn' ? 'warn-bar' : 'info-bar';
   const icon = type === 'warn' ? 'solar:danger-triangle-linear' : type === 'guia' ? 'solar:book-2-linear' : 'solar:info-circle-linear';
-
   return `<div class="dynamic-bar ${cls}">
     <button data-expand="${type}"><div class="marquee-row"><iconify-icon class="notice-icon" icon="${icon}" aria-hidden="true"></iconify-icon><span class="notice-copy" data-short="${escapeHTML(shortText)}" data-long="${escapeHTML(longText)}">${escapeHTML(shortText)}</span></div></button>
     <div class="expand" id="expand-${type}"><div class="expand-inner markdown">${markdownHTML(longText)}</div></div>
   </div>`;
 }
-
 function renderLoading() {
   app.innerHTML = `<div class="loading-screen" role="status" aria-live="polite">
     <iconify-icon icon="svg-spinners:90-ring-with-bg" aria-hidden="true"></iconify-icon>
@@ -789,7 +781,6 @@ async function renderDetail(slug) {
   renderLoading();
 
   let item;
-
   try {
     const res = await fetch(`data/items/${encodeURIComponent(meta.file)}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('item');
@@ -798,7 +789,6 @@ async function renderDetail(slug) {
     renderError('500');
     return;
   }
-
   const hasRemoved = Boolean(item.removed !== undefined || item.removedtxt);
   const hasWarn = Boolean(item.warn);
   const hasInfo = Boolean(item.info || item.infotxt);
@@ -806,9 +796,7 @@ async function renderDetail(slug) {
   const hasBottomNotices = hasWarn || hasInfo || hasGuide;
   const imageArray = Array.isArray(item.Image) ? item.Image : (item.Image ? [item.Image] : []);
   const buttonLinks = Array.isArray(item.ButtonLink) ? item.ButtonLink : (item.ButtonLink ? [item.ButtonLink] : []);
-
   const detailsMeta = item.Category || item.Platforms ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformBadges(item.Platforms) ? `<div class="detail-platforms">${platformBadges(item.Platforms)}</div>` : ''}</div>` : '';
-
   let html = `<div class="detail-wrap">
     <a class="back" href="#/"><iconify-icon icon="solar:arrow-left-linear" aria-hidden="true"></iconify-icon> VOLTAR AO CATÁLOGO</a>
     ${hasRemoved ? `<div class="detail-removed">${marqueeBar('removed', item.removed || 'ESTE CONTEÚDO POSSUI UMA OBSERVAÇÃO', item.removedtxt || '')}</div>` : ''}
@@ -831,7 +819,6 @@ async function renderDetail(slug) {
       </div>
     </article>
   </div>`;
-
   app.innerHTML = html;
   wireBars();
 }
@@ -849,7 +836,6 @@ function wireBars() {
       if (bar) bar.classList.toggle('is-open', target.classList.contains('open'));
     });
   });
-
   document.querySelectorAll('[data-marquee]').forEach(track => {
     const clip = track.closest('.marquee-clip');
     const group = track.querySelector('.marquee-group');
@@ -859,7 +845,6 @@ function wireBars() {
       while (group.scrollWidth < clip.clientWidth + 100) {
         group.insertAdjacentHTML('beforeend', group.firstElementChild.outerHTML);
       }
-
       const duplicate = group.cloneNode(true);
       duplicate.setAttribute('aria-hidden', 'true');
       track.append(duplicate);
@@ -874,7 +859,6 @@ function wireBars() {
     setInterval(() => {
       const bar = copy.closest('.dynamic-bar');
       if (!bar || bar.classList.contains('is-open')) return;
-
       copy.classList.add('notice-exit');
 
       setTimeout(() => {
@@ -887,7 +871,6 @@ function wireBars() {
         copy.textContent = showingLong ? copy.dataset.long : copy.dataset.short;
         copy.classList.add('notice-prep', 'notice-enter');
         copy.classList.remove('notice-exit');
-
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             copy.classList.remove('notice-prep');
@@ -903,7 +886,6 @@ async function route() {
   const hash = location.hash || '#/';
 
   if (hash === '#/' || hash === '#') return renderHome();
-
   const match = hash.match(/^#\/item\/(.+)$/);
   if (match) return renderDetail(decodeURIComponent(match[1]));
 
@@ -918,7 +900,6 @@ window.addEventListener('keydown', e=> {
     document.querySelector('#search')?.focus();
   }
 });
-
 (async()=>{
   try {
     renderLoading();
