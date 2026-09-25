@@ -17,6 +17,9 @@ const app = document.querySelector('#app');
 const detailTimers = new Set();
 const playerElements = {
   art: document.querySelector('#player-art'),
+  artCurrent: document.querySelector('#player-art .player-art-current'),
+  artNext: document.querySelector('#player-art .player-art-next'),
+  artIcon: document.querySelector('#player-art .player-art-icon'),
   titleLink: document.querySelector('#player-title-link'),
   sourceLink: document.querySelector('#player-source-link'),
   title: document.querySelector('#player-title'),
@@ -74,18 +77,34 @@ function preparePlayerTitleStage() {
   playerElements.titleNextLabel = title.querySelector('.player-title-next-label');
   playerElements.titleNextTrack = title.querySelector('.player-title-next-track');
 }
-function setPlayerArt(track, nextTrack = track) {
+function setPlayerArt(track, nextTrack = null) {
   if (!playerElements.art || !track) return;
   const cover = trackCover(track);
   const nextCover = trackCover(nextTrack);
   const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
-  playerElements.art.style.setProperty('--player-next-art', nextCover ? `url(${JSON.stringify(nextCover)})` : 'none');
-  playerElements.art.innerHTML = cover
-    ? `<img src="${escapeHTML(cover)}" alt="" loading="eager">`
-    : '<iconify-icon icon="solar:music-note-3-linear"></iconify-icon>';
+  if (playerElements.artCurrent) {
+    playerElements.artCurrent.src = cover || '';
+    playerElements.artCurrent.alt = cover ? '' : 'Sem capa disponível';
+    playerElements.artCurrent.hidden = !cover;
+  }
+  if (playerElements.artNext) {
+    playerElements.artNext.src = nextCover || '';
+    playerElements.artNext.alt = nextCover ? '' : 'Sem próxima capa disponível';
+    playerElements.artNext.hidden = !nextCover;
+  }
+  if (playerElements.artIcon) playerElements.artIcon.hidden = Boolean(cover);
   playerElements.art.href = officialUrl;
   playerElements.art.classList.add('has-link');
   playerElements.art.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
+}
+function preloadNextTrackCover() {
+  const next = player.tracks[player.index + 1];
+  if (!next) return;
+  const cover = trackCover(next);
+  if (!cover) return;
+  const image = new Image();
+  image.decoding = 'async';
+  image.src = cover;
 }
 function resetMiniNextNotice() {
   clearTimeout(player.miniNoticeTimer);
@@ -103,9 +122,7 @@ function resetMiniNextNotice() {
     'no-transition'
   );
   const current = player.tracks[player.index];
-  if (current) {
-    setPlayerArt(current);
-  }
+  if (current) setPlayerArt(current, null);
 }
 function scheduleMiniNextNotice() {
   const next = player.tracks[player.index + 1];
@@ -117,6 +134,7 @@ function scheduleMiniNextNotice() {
   playerElements.titleNextTrack.textContent = next.title;
   const current = player.tracks[player.index];
   if (current) setPlayerArt(current, next);
+  preloadNextTrackCover();
   player.miniNoticeTimer = setTimeout(() => {
     const playerElement = document.querySelector('#music-player');
     if (!playerElement?.classList.contains('is-mini') || !player.playing) return;
@@ -141,10 +159,6 @@ function scheduleMiniNextNotice() {
         if (playerElements.art) {
           playerElements.art.classList.remove('is-next-title');
           playerElements.art.classList.add('is-returning');
-        }
-        const current = player.tracks[player.index];
-        if (current) {
-          setPlayerArt(current);
         }
         player.miniNoticeTimer = setTimeout(() => {
           playerElements.title.classList.add('no-transition');
@@ -181,8 +195,8 @@ function schedulePlayerCollapse(delay = 2600) {
   if (!playerElement) return;
   clearTimeout(player.collapseTimer);
   player.collapseTimer = setTimeout(() => {
-    if (playerElement.matches(':hover') || playerElement.matches(':focus-within')) {
-      schedulePlayerCollapse(1800);
+    if (playerElement.matches(':hover')) {
+      schedulePlayerCollapse(450);
       return;
     }
     setPlayerCompact(true);
@@ -254,6 +268,7 @@ function syncTrackList() {
     player.tracks = Array.isArray(sounds) ? sounds.map(mapSound).filter(track => track.src) : [];
     player.index = 0;
     player.duration = player.tracks[0]?.duration || 0;
+    preloadNextTrackCover();
     syncCurrentSound(() => {
       player.ready = true;
       updatePlayer();
@@ -267,6 +282,7 @@ function selectTrack(index, autoplay = false) {
   player.miniNoticeTrack = null;
   resetMiniNextNotice();
   player.duration = player.tracks[player.index]?.duration || 0;
+  preloadNextTrackCover();
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
   updatePlayer();
@@ -290,9 +306,9 @@ function selectTrack(index, autoplay = false) {
   player.playing = autoplay;
   updatePlayer();
 }
-function wakePlayer() {
+function wakePlayer(pointerType = '') {
   expandPlayer();
-  schedulePlayerCollapse(3200);
+  if (pointerType && pointerType !== 'mouse') schedulePlayerCollapse(3200);
 }
 function setupPlayer() {
   const frame = document.querySelector('#soundcloud-player');
@@ -301,18 +317,17 @@ function setupPlayer() {
   preparePlayerTitleStage();
   setPlayerCompact(true);
   updatePlayer();
-  ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
-    playerElement.addEventListener(eventName, wakePlayer, { passive: true });
-  });
-  playerElement.addEventListener('mouseenter', () => expandPlayer());
-  playerElement.addEventListener('mouseleave', () => schedulePlayerCollapse());
-  playerElement.addEventListener('focusin', () => expandPlayer());
-  playerElement.addEventListener('focusout', () => {
-    setTimeout(() => {
-      if (!playerElement.matches(':focus-within') && !playerElement.matches(':hover')) {
-        schedulePlayerCollapse();
-      }
-    }, 50);
+  playerElement.addEventListener('pointerenter', event => {
+    if (event.pointerType === 'mouse' || !event.pointerType) expandPlayer();
+  }, { passive: true });
+  playerElement.addEventListener('pointerleave', event => {
+    if (event.pointerType === 'mouse' || !event.pointerType) schedulePlayerCollapse(450);
+  }, { passive: true });
+  playerElement.addEventListener('pointerdown', event => wakePlayer(event.pointerType), { passive: true });
+  playerElement.addEventListener('keydown', () => wakePlayer('keyboard'), { passive: true });
+  playerElement.addEventListener('focusin', () => {
+    expandPlayer();
+    schedulePlayerCollapse(3200);
   });
   const params = new URLSearchParams({
     url: SOUNDCLOUD_PROFILE_URL,
@@ -378,28 +393,28 @@ function setupPlayer() {
     resetMiniNextNotice();
     updatePlayer();
   });
-  playerElements.play.addEventListener('click', () => {
-    wakePlayer();
+  playerElements.play.addEventListener('click', event => {
+    wakePlayer(event.detail === 0 ? 'keyboard' : 'mouse');
     if (!player.widget || !player.tracks.length) return;
     if (player.playing) player.widget.pause();
     else player.widget.play();
   });
-  playerElements.prev.addEventListener('click', () => {
-    wakePlayer();
+  playerElements.prev.addEventListener('click', event => {
+    wakePlayer(event.detail === 0 ? 'keyboard' : 'mouse');
     selectTrack(player.index - 1, true);
   });
-  playerElements.next.addEventListener('click', () => {
-    wakePlayer();
+  playerElements.next.addEventListener('click', event => {
+    wakePlayer(event.detail === 0 ? 'keyboard' : 'mouse');
     selectTrack(player.index + 1, true);
   });
   playerElements.seek.addEventListener('input', () => {
-    wakePlayer();
+    wakePlayer('keyboard');
     if (player.widget && player.duration) {
       player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
     }
   });
   playerElements.volume.addEventListener('input', () => {
-    wakePlayer();
+    wakePlayer('keyboard');
     if (player.widget) {
       player.widget.setVolume(Number(playerElements.volume.value) * 100);
     }
