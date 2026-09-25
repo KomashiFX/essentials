@@ -14,6 +14,7 @@ const player = {
   collapseTimer: null
 };
 const app = document.querySelector('#app');
+const detailTimers = new Set();
 const playerElements = {
   art: document.querySelector('#player-art'),
   titleLink: document.querySelector('#player-title-link'),
@@ -27,8 +28,6 @@ const playerElements = {
   current: document.querySelector('#player-current'),
   duration: document.querySelector('#player-duration'),
   volume: document.querySelector('#player-volume'),
-  nextUp: document.querySelector('#player-next-up'),
-  nextTitle: document.querySelector('#player-next-title'),
   titleCurrent: null,
   titleNextLabel: null,
   titleNextTrack: null
@@ -38,7 +37,6 @@ function formatTime(seconds) {
   const safe = Math.max(0, Math.floor(seconds));
   return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`;
 }
-
 function trackCover(track) {
   return track?.cover || '';
 }
@@ -62,7 +60,6 @@ function updateMediaSession(track) {
     artwork: cover ? [{ src: cover, sizes: '512x512', type: 'image/jpeg' }] : []
   });
 }
-
 function preparePlayerTitleStage() {
   const title = playerElements.title;
   if (!title || title.dataset.stageReady === 'true') return;
@@ -77,26 +74,22 @@ function preparePlayerTitleStage() {
   playerElements.titleNextLabel = title.querySelector('.player-title-next-label');
   playerElements.titleNextTrack = title.querySelector('.player-title-next-track');
 }
-
-function setPlayerArt(track) {
+function setPlayerArt(track, nextTrack = track) {
   if (!playerElements.art || !track) return;
-
   const cover = trackCover(track);
+  const nextCover = trackCover(nextTrack);
   const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
-
+  playerElements.art.style.setProperty('--player-next-art', nextCover ? `url(${JSON.stringify(nextCover)})` : 'none');
   playerElements.art.innerHTML = cover
-    ? `<img src="${escapeHTML(cover)}" alt="" loading="lazy">`
+    ? `<img src="${escapeHTML(cover)}" alt="" loading="eager">`
     : '<iconify-icon icon="solar:music-note-3-linear"></iconify-icon>';
-
   playerElements.art.href = officialUrl;
   playerElements.art.classList.add('has-link');
   playerElements.art.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
 }
-
 function resetMiniNextNotice() {
   clearTimeout(player.miniNoticeTimer);
   player.miniNoticeTimer = null;
-
   if (!playerElements.title) return;
   playerElements.title.classList.remove(
     'is-next-label',
@@ -104,85 +97,65 @@ function resetMiniNextNotice() {
     'is-returning',
     'no-transition'
   );
-
   playerElements.art?.classList.remove(
     'is-next-title',
     'is-returning',
     'no-transition'
   );
-
   const current = player.tracks[player.index];
   if (current) {
     setPlayerArt(current);
   }
 }
-
 function scheduleMiniNextNotice() {
   const next = player.tracks[player.index + 1];
-
   if (!next?.title || !player.ready || !player.playing || !player.miniNoticePending) return;
   if (player.miniNoticeTrack === player.index) return;
-
   resetMiniNextNotice();
   player.miniNoticeTrack = player.index;
   player.miniNoticePending = false;
   playerElements.titleNextTrack.textContent = next.title;
-
+  const current = player.tracks[player.index];
+  if (current) setPlayerArt(current, next);
   player.miniNoticeTimer = setTimeout(() => {
     const playerElement = document.querySelector('#music-player');
-
     if (!playerElement?.classList.contains('is-mini') || !player.playing) return;
-
     playerElements.title.classList.add('is-next-label');
-
     player.miniNoticeTimer = setTimeout(() => {
       if (!player.playing) {
         resetMiniNextNotice();
         return;
       }
-
       playerElements.title.classList.remove('is-next-label');
       playerElements.title.classList.add('is-next-title');
-
       if (playerElements.art) {
         playerElements.art.classList.add('is-next-title');
       }
-
-      setPlayerArt(next);
-
       player.miniNoticeTimer = setTimeout(() => {
         if (!player.playing) {
           resetMiniNextNotice();
           return;
         }
-
         playerElements.title.classList.remove('is-next-title');
         playerElements.title.classList.add('is-returning');
-
         if (playerElements.art) {
           playerElements.art.classList.remove('is-next-title');
           playerElements.art.classList.add('is-returning');
         }
-
         const current = player.tracks[player.index];
         if (current) {
           setPlayerArt(current);
         }
-
         player.miniNoticeTimer = setTimeout(() => {
           playerElements.title.classList.add('no-transition');
           playerElements.title.classList.remove('is-returning');
-
           if (playerElements.art) {
             playerElements.art.classList.add('no-transition');
             playerElements.art.classList.remove('is-returning');
           }
-
           void playerElements.title.offsetWidth;
           if (playerElements.art) void playerElements.art.offsetWidth;
-
           playerElements.title.classList.remove('no-transition');
-
           if (playerElements.art) {
             playerElements.art.classList.remove('no-transition');
           }
@@ -191,38 +164,30 @@ function scheduleMiniNextNotice() {
     }, 2400);
   }, 10000);
 }
-
 function setPlayerCompact(compact = true) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
   playerElement.classList.toggle('is-mini', compact);
-  playerElements.nextUp?.setAttribute('hidden', '');
 }
-
 function expandPlayer() {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
-
   clearTimeout(player.collapseTimer);
   playerElement.classList.remove('is-mini');
   resetMiniNextNotice();
 }
-
 function schedulePlayerCollapse(delay = 2600) {
   const playerElement = document.querySelector('#music-player');
   if (!playerElement) return;
   clearTimeout(player.collapseTimer);
-
   player.collapseTimer = setTimeout(() => {
     if (playerElement.matches(':hover') || playerElement.matches(':focus-within')) {
       schedulePlayerCollapse(1800);
       return;
     }
-
     setPlayerCompact(true);
   }, delay);
 }
-
 function updateNavigation() {
   const hasTracks = player.tracks.length > 0;
   const canSkip = player.tracks.length > 1;
@@ -230,16 +195,13 @@ function updateNavigation() {
     button.disabled = !canSkip;
     button.setAttribute('aria-disabled', String(!canSkip));
   });
-
   playerElements.play.disabled = !hasTracks;
 }
-
 function updatePlayer() {
   const track = player.tracks[player.index];
   if (!track) {
     const title = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
     const artist = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
-
     if (playerElements.titleCurrent) playerElements.titleCurrent.textContent = title;
     else playerElements.title.textContent = title;
     playerElements.artist.textContent = artist;
@@ -247,9 +209,7 @@ function updatePlayer() {
     updateNavigation();
     return;
   }
-
   const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
-
   if (playerElements.titleCurrent) {
     playerElements.titleCurrent.textContent = track.title;
   } else {
@@ -260,69 +220,56 @@ function updatePlayer() {
   playerElements.titleLink.classList.add('has-link');
   playerElements.titleLink.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
   playerElements.sourceLink.href = officialUrl;
-
   setPlayerArt(track);
-
   playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
   playerElements.play.setAttribute('aria-label', player.playing ? 'Pausar' : 'Reproduzir');
   playerElements.play.title = player.playing ? 'Pausar' : 'Reproduzir';
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
   playerElements.duration.textContent = formatTime((track.duration || player.duration || 0) / 1000);
-
   if (track.duration) player.duration = track.duration;
-
   updateNavigation();
-  playerElements.nextUp?.setAttribute('hidden', '');
   updateMediaSession(track);
 }
-
 function syncCurrentSound(onDone) {
   if (!player.widget) return;
   player.widget.getCurrentSoundIndex(index => {
     if (Number.isInteger(index) && index >= 0 && index < player.tracks.length) {
       player.index = index;
     }
-
     player.widget.getCurrentSound(sound => {
       if (sound) {
         const mapped = mapSound(sound);
         player.tracks[player.index] = { ...(player.tracks[player.index] || {}), ...mapped };
         player.duration = mapped.duration || player.duration;
       }
-
       if (onDone) onDone();
     });
   });
 }
 function syncTrackList() {
   if (!player.widget) return;
-
   player.widget.getSounds(sounds => {
     player.error = false;
     player.tracks = Array.isArray(sounds) ? sounds.map(mapSound).filter(track => track.src) : [];
     player.index = 0;
     player.duration = player.tracks[0]?.duration || 0;
-
     syncCurrentSound(() => {
       player.ready = true;
       updatePlayer();
     });
   });
 }
-
 function selectTrack(index, autoplay = false) {
   if (!player.widget || !player.tracks.length) return;
   player.index = (index + player.tracks.length) % player.tracks.length;
   player.miniNoticePending = Boolean(player.tracks[player.index + 1]);
   player.miniNoticeTrack = null;
   resetMiniNextNotice();
-
   player.duration = player.tracks[player.index]?.duration || 0;
   playerElements.seek.value = 0;
   playerElements.current.textContent = '0:00';
   updatePlayer();
-
   const target = player.index;
   if (typeof player.widget.skip === 'function') {
     player.widget.skip(target);
@@ -330,7 +277,6 @@ function selectTrack(index, autoplay = false) {
   } else {
     const track = player.tracks[target];
     if (!track?.src) return;
-
     player.widget.load(track.src, {
       auto_play: autoplay,
       show_artwork: false,
@@ -341,7 +287,6 @@ function selectTrack(index, autoplay = false) {
       visual: false
     });
   }
-
   player.playing = autoplay;
   updatePlayer();
 }
@@ -349,24 +294,19 @@ function wakePlayer() {
   expandPlayer();
   schedulePlayerCollapse(3200);
 }
-
 function setupPlayer() {
   const frame = document.querySelector('#soundcloud-player');
   if (!frame || !window.SC?.Widget) return;
-
   const playerElement = document.querySelector('#music-player');
-
   preparePlayerTitleStage();
   setPlayerCompact(true);
   updatePlayer();
-
   ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
     playerElement.addEventListener(eventName, wakePlayer, { passive: true });
   });
   playerElement.addEventListener('mouseenter', () => expandPlayer());
   playerElement.addEventListener('mouseleave', () => schedulePlayerCollapse());
   playerElement.addEventListener('focusin', () => expandPlayer());
-
   playerElement.addEventListener('focusout', () => {
     setTimeout(() => {
       if (!playerElement.matches(':focus-within') && !playerElement.matches(':hover')) {
@@ -385,7 +325,6 @@ function setupPlayer() {
     show_artwork: 'false',
     visual: 'false'
   });
-
   frame.src = `https://w.soundcloud.com/player/?${params.toString()}`;
   player.widget = window.SC.Widget(frame);
   player.widget.bind(window.SC.Widget.Events.READY, () => {
@@ -393,7 +332,6 @@ function setupPlayer() {
     player.widget.setVolume(Number(playerElements.volume.value) * 100);
     syncTrackList();
   });
-
   player.widget.bind(window.SC.Widget.Events.PLAY, () => {
     player.playing = true;
     syncCurrentSound(() => {
@@ -404,7 +342,6 @@ function setupPlayer() {
       });
     });
   });
-
   player.widget.bind(window.SC.Widget.Events.PAUSE, () => {
     player.playing = false;
     resetMiniNextNotice();
@@ -421,16 +358,13 @@ function setupPlayer() {
       updatePlayer();
     }
   });
-
   player.widget.bind(window.SC.Widget.Events.PLAY_PROGRESS, data => {
     if (!player.ready) return;
     const position = Number(data?.currentPosition) || 0;
     const relative = Number(data?.relativePosition) || 0;
-
     if (!player.duration && relative > 0) {
       player.duration = position / relative;
     }
-
     playerElements.current.textContent = formatTime(position / 1000);
     playerElements.duration.textContent = formatTime(player.duration / 1000);
     playerElements.seek.value = Math.max(0, Math.min(100, relative * 100));
@@ -444,11 +378,9 @@ function setupPlayer() {
     resetMiniNextNotice();
     updatePlayer();
   });
-
   playerElements.play.addEventListener('click', () => {
     wakePlayer();
     if (!player.widget || !player.tracks.length) return;
-
     if (player.playing) player.widget.pause();
     else player.widget.play();
   });
@@ -456,22 +388,18 @@ function setupPlayer() {
     wakePlayer();
     selectTrack(player.index - 1, true);
   });
-
   playerElements.next.addEventListener('click', () => {
     wakePlayer();
     selectTrack(player.index + 1, true);
   });
-
   playerElements.seek.addEventListener('input', () => {
     wakePlayer();
-
     if (player.widget && player.duration) {
       player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
     }
   });
   playerElements.volume.addEventListener('input', () => {
     wakePlayer();
-
     if (player.widget) {
       player.widget.setVolume(Number(playerElements.volume.value) * 100);
     }
@@ -486,13 +414,11 @@ function setupPlayer() {
 const normalize = (value) => String(value ?? '')
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   .toLowerCase().replace(/[^a-z0-9\s]+/g, ' ').replace(/\s+/g, ' ').trim();
-
 function editDistance(a, b) {
   if (a === b) return 0;
   if (!a) return b.length;
   if (!b) return a.length;
   const row = Array.from({ length: b.length + 1 }, (_, i) => i);
-
   for (let i = 1; i <= a.length; i++) {
     let prev = row[0];
     row[0] = i;
@@ -502,14 +428,11 @@ function editDistance(a, b) {
       prev = temp;
     }
   }
-
   return row[b.length];
 }
-
 function fuzzyScore(query, item) {
   const q = normalize(query);
   if (!q) return 0;
-
   const title = normalize(item.Title);
   const aliases = (item.aliases || []).map(normalize);
   const hay = [title, ...aliases, normalize(item.Description)].filter(Boolean);
@@ -517,29 +440,23 @@ function fuzzyScore(query, item) {
   for (const text of hay) {
     if (text === q) best = Math.max(best, 1.0);
     if (text.includes(q)) best = Math.max(best, 0.92 - Math.min(.2, (text.length-q.length)/500));
-
     for (const word of text.split(/\s+/)) {
       const d = editDistance(q, word);
       const score = 1 - d / Math.max(q.length, word.length, 1);
       best = Math.max(best, score * (text === title ? 0.98 : 0.86));
     }
   }
-
   const parts = q.split(/\s+/).filter(Boolean);
-
   if (parts.length > 1) {
     let matched = 0;
     for (const part of parts) {
       if (hay.some(t => t.includes(part) || t.split(/\s+/).some(w => 1 - editDistance(part,w)/Math.max(part.length,w.length,1) > .62))) matched++;
     }
-
     best = Math.max(best, (matched / parts.length) * .85);
   }
-
   return best;
 }
-
-async function loadCatalog() {
+function loadCatalog() {
   const catalog = window.ESSENTIALS_ITEMS;
   if (!Array.isArray(catalog)) throw new Error('items');
   state.items = catalog;
@@ -547,18 +464,15 @@ async function loadCatalog() {
 function escapeHTML(s) {
   return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 }
-
 function logoMarkup(source) {
   const value = String(source ?? '').trim();
   if (!value) return '';
-
   if (/^https?:\/\//i.test(value)) {
     return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
   }
   const svg = value.startsWith('<svg')
     ? value.replace(/currentColor/gi, '#fff')
     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 66.145831 61.515624"><path d="${escapeHTML(value)}" fill="#fff"></path></svg>`;
-
   const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   return `<img class="card-logo" src="${escapeHTML(dataUri)}" alt="" loading="lazy">`;
 }
@@ -579,14 +493,12 @@ function markdownHTML(value) {
   let list = false;
   let code = false;
   let codeLines = [];
-
   const closeList = () => {
     if (list) {
       output.push('</ul>');
       list = false;
     }
   };
-
   for (const line of lines) {
     if (line.trim().startsWith('```')) {
       if (code) {
@@ -597,21 +509,17 @@ function markdownHTML(value) {
       closeList();
       continue;
     }
-
     if (code) {
       codeLines.push(line);
       continue;
     }
-
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
     const bullet = line.match(/^\s*[-*]\s+(.+)$/);
-
     if (heading) {
       closeList();
       output.push(`<h${heading[1].length}>${markdownInline(heading[2])}</h${heading[1].length}>`);
       continue;
     }
-
     if (bullet) {
       if (!list) {
         output.push('<ul>');
@@ -620,15 +528,11 @@ function markdownHTML(value) {
       output.push(`<li>${markdownInline(bullet[1])}</li>`);
       continue;
     }
-
     closeList();
-
     if (line.trim()) output.push(`<p>${markdownInline(line)}</p>`);
   }
-
   if (code) output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
   closeList();
-
   return output.join('');
 }
 function renderError(code = '500') {
@@ -644,20 +548,16 @@ function categoryList() {
   const cats = [...new Set(state.items.map(i => i.Category).filter(Boolean))].sort();
   return ['TODOS', ...cats];
 }
-
 function filteredItems() {
   let arr = state.items.slice();
-
   if (state.category !== 'TODOS') arr = arr.filter(i => i.Category === state.category);
   if (state.query.trim()) {
     arr = arr.map(i => ({i, score: fuzzyScore(state.query, i)})).filter(x => x.score >= .48).sort((a,b)=>b.score-a.score).map(x=>x.i);
   } else {
     arr.sort((a,b) => (a.Title||'').localeCompare(b.Title||'', 'pt-BR'));
   }
-
   return arr;
 }
-
 function renderHome() {
   const items = filteredItems();
   app.innerHTML = `
@@ -680,14 +580,12 @@ function renderHome() {
       ${items.length ? items.map(cardHTML).join('') : '<div class="empty">Nenhum resultado encontrado.</div>'}
     </section>`;
   const input = document.querySelector('#search');
-
   input.addEventListener('input', e => {
     state.query = e.target.value;
     renderHome();
     document.querySelector('#search')?.focus();
     document.querySelector('#search')?.setSelectionRange(state.query.length,state.query.length);
   });
-
   document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{
     state.category=b.dataset.cat;
     renderHome();
@@ -701,7 +599,6 @@ function platformMap() {
     tv: { label: 'TV', icon: 'mdi:television' },
     linux: { label: 'Linux', icon: 'mdi:linux' },
     web: { label: 'Web', icon: 'mdi:web' },
-    browser: { label: 'Browser', icon: 'mdi:application-outline' },
     tablet: { label: 'Tablet', icon: 'mdi:tablet-android' },
     outros: { label: 'Outros', icon: 'mdi:devices' }
   };
@@ -723,14 +620,12 @@ function platformBadges(platforms) {
   const values = Array.isArray(platforms) ? platforms : (typeof platforms === 'string' ? platforms.split(/[\n,;]+/) : []);
   const unique = [...new Set(values.map(value => normalizePlatformKey(value)).filter(Boolean))];
   if (!unique.length) return '';
-
   const map = platformMap();
   return unique.map(key => {
     const meta = map[key] || { label: key, icon: 'mdi:circle-medium' };
     return `<span class="platform-badge"><iconify-icon icon="${meta.icon}" aria-hidden="true"></iconify-icon><span>${escapeHTML(meta.label)}</span></span>`;
   }).join('');
 }
-
 function cardDescriptionHTML(value) {
   const withoutLinks = String(value ?? '').replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/gi, '$1');
   return markdownHTML(withoutLinks);
@@ -738,7 +633,7 @@ function cardDescriptionHTML(value) {
 function cardHTML(item) {
   const banner = item.Banner || item.banner || (Array.isArray(item.Image) ? item.Image[0] : item.Image);
   const logo = item.Logo || item.logo;
-  return `<a class="card ${banner ? 'has-banner' : ''}" href="#/item/${encodeURIComponent(item.slug)}">
+  return `<a class="card" href="#/item/${encodeURIComponent(item.slug)}">
     ${banner ? `<div class="card-media"><img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy"></div>` : ''}
     <div class="card-content">
       <div class="card-meta">
@@ -773,13 +668,10 @@ function renderLoading() {
     <span>Carregando</span>
   </div>`;
 }
-
 async function renderDetail(slug) {
   const meta = state.items.find(i=>i.slug===slug);
   if (!meta) { renderError('404'); return; }
-
   renderLoading();
-
   let item;
   try {
     const res = await fetch(`data/items/${encodeURIComponent(meta.file)}`, { cache: 'no-store' });
@@ -796,7 +688,8 @@ async function renderDetail(slug) {
   const hasBottomNotices = hasWarn || hasInfo || hasGuide;
   const imageArray = Array.isArray(item.Image) ? item.Image : (item.Image ? [item.Image] : []);
   const buttonLinks = Array.isArray(item.ButtonLink) ? item.ButtonLink : (item.ButtonLink ? [item.ButtonLink] : []);
-  const detailsMeta = item.Category || item.Platforms ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformBadges(item.Platforms) ? `<div class="detail-platforms">${platformBadges(item.Platforms)}</div>` : ''}</div>` : '';
+  const platformMarkup = platformBadges(item.Platforms);
+  const detailsMeta = item.Category || platformMarkup ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformMarkup ? `<div class="detail-platforms">${platformMarkup}</div>` : ''}</div>` : '';
   let html = `<div class="detail-wrap">
     <a class="back" href="#/"><iconify-icon icon="solar:arrow-left-linear" aria-hidden="true"></iconify-icon> VOLTAR AO CATÁLOGO</a>
     ${hasRemoved ? `<div class="detail-removed">${marqueeBar('removed', item.removed || 'ESTE CONTEÚDO POSSUI UMA OBSERVAÇÃO', item.removedtxt || '')}</div>` : ''}
@@ -822,16 +715,15 @@ async function renderDetail(slug) {
   app.innerHTML = html;
   wireBars();
 }
-
 function wireBars() {
+  detailTimers.forEach(timer => clearInterval(timer));
+  detailTimers.clear();
   document.querySelectorAll('[data-expand]').forEach(btn => {
     btn.addEventListener('click', e => {
       const key = btn.dataset.expand;
       const target = document.querySelector(`#expand-${key}`);
       if (!target) return;
-
       target.classList.toggle('open');
-
       const bar = target.closest('.dynamic-bar');
       if (bar) bar.classList.toggle('is-open', target.classList.contains('open'));
     });
@@ -840,7 +732,6 @@ function wireBars() {
     const clip = track.closest('.marquee-clip');
     const group = track.querySelector('.marquee-group');
     if (!clip || !group) return;
-
     requestAnimationFrame(() => {
       while (group.scrollWidth < clip.clientWidth + 100) {
         group.insertAdjacentHTML('beforeend', group.firstElementChild.outerHTML);
@@ -851,22 +742,18 @@ function wireBars() {
       track.style.setProperty('--marquee-duration', `${Math.max(8, group.scrollWidth / 42)}s`);
     });
   });
-
   document.querySelectorAll('.notice-copy').forEach(copy => {
     let showingLong = false;
     const fadeDuration = 250;
-
-    setInterval(() => {
+    const timer = setInterval(() => {
       const bar = copy.closest('.dynamic-bar');
       if (!bar || bar.classList.contains('is-open')) return;
       copy.classList.add('notice-exit');
-
       setTimeout(() => {
         if (bar.classList.contains('is-open')) {
           copy.classList.remove('notice-exit');
           return;
         }
-
         showingLong = !showingLong;
         copy.textContent = showingLong ? copy.dataset.long : copy.dataset.short;
         copy.classList.add('notice-prep', 'notice-enter');
@@ -879,21 +766,17 @@ function wireBars() {
         });
       }, fadeDuration);
     }, 5600);
+    detailTimers.add(timer);
   });
 }
-
 async function route() {
   const hash = location.hash || '#/';
-
   if (hash === '#/' || hash === '#') return renderHome();
   const match = hash.match(/^#\/item\/(.+)$/);
   if (match) return renderDetail(decodeURIComponent(match[1]));
-
   return renderHome();
 }
-
 window.addEventListener('hashchange', route);
-
 window.addEventListener('keydown', e=> {
   if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k') {
     e.preventDefault();
