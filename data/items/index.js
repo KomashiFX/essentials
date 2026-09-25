@@ -133,8 +133,8 @@ window.ESSENTIALS_ITEMS = [
       "pc"
     ],
     "Image": null,
-    "Logo": null,
-    "Banner": null
+    "Logo": "https://www.techspot.com/images2/downloads/topdownload/2021/01/2021-01-11-ts3_thumbs-e5a.png",
+    "Banner": "https://www.irrompibles.net/irrwp/wp-content/uploads/2022/10/ps2-games-e1666713341454.png"
   },
   {
     "file": "sistemaoperacional.json",
