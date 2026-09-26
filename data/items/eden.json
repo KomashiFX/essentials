@@ -1,0 +1,16 @@
+{
+  "slug": "eden",
+  "Title": "Eden",
+  "Description": "Emulador de Switch para Android, PC e Linux.",
+  "Category": "Emuladores",
+  "text": "Como uma certa marca gosta de matar emuladores esse talvez seja o sucessor de muitos que já foram eliminados, o Eden ele suporta muitos jogos de Switch, basta você baixar tudo que é obrigatório para o funcionamento do emulador e depois fazer a festa, nem posso falar muito por que o GitHub vai derrubar esse site e invadir minha casa, mas no guia abaixo tem um link ensinando de como configurar tudo.",
+  "guia": "GUIA DE INSTALAÇÃO",
+  "guiatxt": "Para PCs, recomendo que você veja esse vídeo:\nhttps://youtu.be/zohR5vo6u3k?si=nKhXUZ6lIRru_vAi\n\nCaso esteja jogando no celular este tutorial vai servir:\nhttps://youtu.be/KNckbQtvz4E?si=7rxZNuqQbIzJK9aY\n(mesmo sendo pra processador mali, se o seu for snapdragon é até melhor)",
+  "Platforms": [
+    "pc",
+    "android",
+    "linux"
+  ],
+  "ButtonLink": "https://git.eden-emu.dev/eden-emu/eden/releases",
+  "ButtonLabel": "Baixar Eden"
+}

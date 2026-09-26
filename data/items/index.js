@@ -1,5 +1,21 @@
 window.ESSENTIALS_ITEMS = [
   {
+    "file": "eden.json",
+    "slug": "eden",
+    "Title": "Eden",
+    "aliases": ["eden", "switch"],
+    "Description": "Emulador de Switch para Android, PC e Linux.",
+    "Category": "Emuladores",
+    "Platforms": [
+      "pc",
+      "android",
+      "linux"
+    ],
+    "Image": null,
+    "Logo": "https://eden-emu.dev/assets/logos/named_logo.png",
+    "Banner": "https://cdn.tugatech.com.pt/imagens/artigos/2026/01/27/tugatech-5097-44938.jpg"
+  },
+  {
     "file": "fdm.json",
     "slug": "fdm",
     "Title": "Free Download Manager",
