@@ -43,6 +43,18 @@ function formatTime(seconds) {
 function trackCover(track) {
   return track?.cover || '';
 }
+function mapSound(sound) {
+  return {
+    title: sound?.title || 'Faixa sem título',
+    artist: sound?.publisher_metadata?.artist || sound?.user?.username || 'SUI UZI',
+    src: sound?.permalink_url || '',
+    officialUrl: sound?.permalink_url || SOUNDCLOUD_PROFILE_URL,
+    // Never fall back to the user's avatar: for tracks without artwork it can make
+    // the next-track artwork look like the current track.
+    cover: sound?.artwork_url || '',
+    duration: Number.isFinite(sound?.duration) ? sound.duration : 0
+  };
+}
 function coverCandidates(source) {
   const url = String(source || '').trim();
   if (!url) return [];
