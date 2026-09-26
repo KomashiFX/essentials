@@ -43,16 +43,53 @@ function formatTime(seconds) {
 function trackCover(track) {
   return track?.cover || '';
 }
-function mapSound(sound) {
-  return {
-    title: sound?.title || 'Faixa sem título',
-    artist: sound?.publisher_metadata?.artist || sound?.user?.username || 'SUI UZI',
-    src: sound?.permalink_url || '',
-    officialUrl: sound?.permalink_url || SOUNDCLOUD_PROFILE_URL,
-    cover: sound?.artwork_url || sound?.user?.avatar_url || '',
-    duration: Number.isFinite(sound?.duration) ? sound.duration : 0
-  };
+function coverCandidates(source) {
+  const url = String(source || '').trim();
+  if (!url) return [];
+  const variants = [url];
+  // SoundCloud commonly exposes thumbnail URLs using -large or -t{n}x{n}.
+  // Try the 500x500 variant first when the supplied URL uses a replaceable size.
+  const highRes = url.replace(/-(?:large|t\d+x\d+|crop)(?=(?:\.[a-z0-9]+)?(?:[?#]|$))/i, '-t500x500');
+  if (highRes !== url) variants.unshift(highRes);
+  return [...new Set(variants)];
 }
+function setArtImage(image, track, missingAlt) {
+  if (!image) return;
+  const candidates = coverCandidates(trackCover(track));
+  const token = `${track?.src || ''}|${candidates.join('|')}`;
+  image.dataset.coverToken = token;
+  image.hidden = true;
+  image.alt = missingAlt;
+  image.onload = () => {
+    if (image.dataset.coverToken === token) image.hidden = false;
+  };
+  image.onerror = () => {
+    if (image.dataset.coverToken !== token) return;
+    candidates.shift();
+    if (candidates.length) {
+      image.src = candidates[0];
+      return;
+    }
+    image.hidden = true;
+  };
+  image.removeAttribute('src');
+  if (candidates.length) image.src = candidates[0];
+}
+function preloadNextTrackCover() {
+  const next = player.tracks[player.index + 1];
+  const candidates = coverCandidates(trackCover(next));
+  if (!candidates.length) return;
+  const image = new Image();
+  image.decoding = 'async';
+  let index = 0;
+  const tryNext = () => {
+    if (index >= candidates.length) return;
+    image.src = candidates[index++];
+  };
+  image.onerror = tryNext;
+  tryNext();
+}
+
 function updateMediaSession(track) {
   if (!('mediaSession' in navigator) || !track) return;
   const cover = trackCover(track);
@@ -79,33 +116,27 @@ function preparePlayerTitleStage() {
 }
 function setPlayerArt(track, nextTrack = null) {
   if (!playerElements.art || !track) return;
-  const cover = trackCover(track);
-  const nextCover = trackCover(nextTrack);
   const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
   if (playerElements.artCurrent) {
-    playerElements.artCurrent.src = cover || '';
-    playerElements.artCurrent.alt = cover ? '' : 'Sem capa disponível';
-    playerElements.artCurrent.hidden = !cover;
+    setArtImage(playerElements.artCurrent, track, 'Sem capa disponível');
   }
   if (playerElements.artNext) {
-    playerElements.artNext.src = nextCover || '';
-    playerElements.artNext.alt = nextCover ? '' : 'Sem próxima capa disponível';
-    playerElements.artNext.hidden = !nextCover;
+    if (nextTrack) {
+      setArtImage(playerElements.artNext, nextTrack, 'Sem próxima capa disponível');
+    } else {
+      playerElements.artNext.dataset.coverToken = '';
+      playerElements.artNext.removeAttribute('src');
+      playerElements.artNext.hidden = true;
+    }
   }
-  if (playerElements.artIcon) playerElements.artIcon.hidden = Boolean(cover);
+  if (playerElements.artIcon) {
+    playerElements.artIcon.hidden = !coverCandidates(trackCover(track)).length;
+  }
   playerElements.art.href = officialUrl;
   playerElements.art.classList.add('has-link');
   playerElements.art.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
 }
-function preloadNextTrackCover() {
-  const next = player.tracks[player.index + 1];
-  if (!next) return;
-  const cover = trackCover(next);
-  if (!cover) return;
-  const image = new Image();
-  image.decoding = 'async';
-  image.src = cover;
-}
+
 function resetMiniNextNotice() {
   clearTimeout(player.miniNoticeTimer);
   player.miniNoticeTimer = null;
