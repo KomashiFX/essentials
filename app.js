@@ -47,7 +47,8 @@ const icons = {
   linux: 'mdi:linux',
   web: 'mdi:web',
   tablet: 'mdi:tablet-android',
-  devices: 'mdi:devices'
+  devices: 'mdi:devices',
+  loading: 'svg-spinners:90-ring-with-bg'
 };
 
 function icon(name) {
@@ -335,7 +336,7 @@ function cardHTML(item, index = 0) {
       </div>
       <div class="card-description markdown">${cardDescriptionHTML(item.Description)}</div>
     </div>
-    <div class="card-foot"><span>${SITE_TEXTS.openAction}</span>${icon('open')}</div>
+    <div class="card-foot"><span>${SITE_TEXTS.openAction}</span><span class="card-foot-icon" aria-hidden="true">${icon('open')}</span></div>
   </a>`;
 }
 
@@ -397,7 +398,7 @@ function detailBarWithFlip(type, shortText, longText) {
 }
 
 function renderLoading() {
-  app.innerHTML = `<div class="loading-screen" role="status" aria-live="polite"><span class="loading-mark" aria-hidden="true">${icon('content')}</span><span>${SITE_TEXTS.loading}</span></div>`;
+  app.innerHTML = `<div class="loading-screen" role="status" aria-live="polite"><span class="loading-mark" aria-hidden="true">${icon('loading')}</span><span>${SITE_TEXTS.loading}</span></div>`;
 }
 
 function updateHomeResults() {
