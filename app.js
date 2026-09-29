@@ -22,7 +22,6 @@ const SITE_TEXTS = Object.freeze({
 const state = {
   items: [],
   query: '',
-  heart: '<path d="M20.8 8.8c0 5.2-8.8 10-8.8 10S3.2 14 3.2 8.8A4.6 4.6 0 0 1 12 6.3a4.6 4.6 0 0 1 8.8 2.5z"/>',
   category: 'TODOS'
 };
 
@@ -31,6 +30,7 @@ const app = document.querySelector('#app');
 const detailTimers = new Set();
 
 const icons = {
+  heart: '<path d="M20.8 8.8c0 5.2-8.8 10-8.8 10S3.2 14 3.2 8.8A4.6 4.6 0 0 1 12 6.3a4.6 4.6 0 0 1 8.8 2.5z"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
   back: '<path d="m14.5 5-7 7 7 7"/><path d="M8 12h12"/>',
   open: '<path d="M14 5h5v5"/><path d="m19 5-9 9"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
@@ -56,6 +56,16 @@ function icon(name) {
   return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${content}</svg>`;
 }
 
+
+function normalize(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function editDistance(a, b) {
   if (a === b) return 0;
@@ -405,11 +415,22 @@ function renderLoading() {
   app.innerHTML = `<div class="loading-screen" role="status" aria-live="polite"><span class="loading-mark" aria-hidden="true">${icon('content')}</span><span>${SITE_TEXTS.loading}</span></div>`;
 }
 
-let searchFrame = 0;
+function updateHomeResults() {
+  const grid = document.querySelector('.grid');
+  const meta = document.querySelector('.result-meta');
+  if (!grid || !meta) return;
 
-function scheduleHomeRender() {
-  cancelAnimationFrame(searchFrame);
-  searchFrame = requestAnimationFrame(() => renderHome());
+  const items = filteredItems();
+
+  meta.innerHTML =
+    items.length +
+    ' resultado' +
+    (items.length === 1 ? '' : 's') +
+    (state.query ? ' para “' + escapeHTML(state.query) + '”' : '');
+
+  grid.innerHTML = items.length
+    ? items.map((item, index) => cardHTML(item, index)).join('')
+    : '<div class="empty">' + escapeHTML(SITE_TEXTS.noResults) + '</div>';
 }
 
 function filteredItems() {
@@ -458,7 +479,7 @@ function renderHome() {
   const field = document.querySelector('#search');
   field?.addEventListener('input', event => {
     state.query = event.target.value;
-    scheduleHomeRender();
+    updateHomeResults();
   });
 
   document.querySelectorAll('[data-category]').forEach(button => {
@@ -541,7 +562,8 @@ async function renderDetail(slug) {
     </div>`;
 
     wireBars();
-  } catch {
+  } catch (error) {
+    console.error('[Essentials] Falha ao carregar item:', error);
     if (currentToken === detailRouteToken) renderError('500');
   }
 }
@@ -619,7 +641,8 @@ window.addEventListener('keydown', event => {
     renderLoading();
     loadCatalog();
     await route();
-  } catch {
+  } catch (error) {
+    console.error('[Essentials] Falha ao iniciar:', error);
     renderError('500');
   }
 })();
