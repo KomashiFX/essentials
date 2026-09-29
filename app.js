@@ -307,9 +307,7 @@ function platformBadges(platforms) {
 
   return unique.map(key => {
     const meta = map[key] || { label: key, icon: 'tag' };
-    const platformIcon = key === 'linux'
-      ? `<img class="platform-logo-linux" src="https://api.iconify.design/simple-icons:linux.svg?color=%23FCC624" alt="" aria-hidden="true" loading="lazy" decoding="async">`
-      : icon(meta.icon);
+    const platformIcon = icon(meta.icon);
     return `<span class="platform-badge">${platformIcon}<span>${escapeHTML(meta.label)}</span></span>`;
   }).join('');
 }
