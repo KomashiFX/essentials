@@ -3,7 +3,7 @@ window.ESSENTIALS_ITEMS = [
     "file": "eden.json",
     "slug": "eden",
     "Title": "Eden",
-    "aliases": ["eden", "switch"],
+    "aliases": null,
     "Description": "Emulador de Switch para Android, PC e Linux.",
     "Category": "Emuladores",
     "Platforms": [

@@ -1,851 +1,623 @@
-const state = { items: [], query: '', category: 'TODOS' };
-const SOUNDCLOUD_PROFILE_URL = 'https://soundcloud.com/sui_uzi';
-const player = {
-  tracks: [],
-  index: 0,
-  widget: null,
-  ready: false,
-  playing: false,
-  duration: 0,
-  error: false,
-  miniNoticeTimer: null,
-  miniNoticePending: false,
-  miniNoticeTrack: null,
-  collapseTimer: null
+const SITE_TEXTS = Object.freeze({
+  heroKicker: 'Hospedado com amor por GitHub',
+  heroTitle: 'Bufus',
+  heroAccent: 'Essentials',
+  heroDescription: 'Uma seleção de recursos essenciais reunidos em um só lugar.',
+  searchPlaceholder: 'Pesquisar no catálogo',
+  openAction: 'ABRIR',
+  noResults: 'Nenhum resultado encontrado.',
+  loading: 'Carregando',
+  errorTitle: 'OCORREU UM ERRO',
+  errorDescription: 'Infelizmente, o site possui algum problema. Isso será resolvido em breve.',
+  backToCatalog: 'VOLTAR AO CATÁLOGO',
+  contentTitle: 'Conteúdo',
+  imagesTitle: 'Imagens',
+  guideLabel: 'GUIA DE USO',
+  informationLabel: 'INFORMAÇÃO',
+  warningLabel: 'Este conteúdo possui um aviso.',
+  removedLabel: 'ESTE CONTEÚDO POSSUI UMA OBSERVAÇÃO',
+  linkLabel: 'ABRIR LINK',
+});
+
+const state = {
+  items: [],
+  query: '',
+  heart: '<path d="M20.8 8.8c0 5.2-8.8 10-8.8 10S3.2 14 3.2 8.8A4.6 4.6 0 0 1 12 6.3a4.6 4.6 0 0 1 8.8 2.5z"/>',
+  category: 'TODOS'
 };
+
 const app = document.querySelector('#app');
+
 const detailTimers = new Set();
-const playerElements = {
-  art: document.querySelector('#player-art'),
-  artCurrent: document.querySelector('#player-art .player-art-current'),
-  artNext: document.querySelector('#player-art .player-art-next'),
-  artIcon: document.querySelector('#player-art .player-art-icon'),
-  titleLink: document.querySelector('#player-title-link'),
-  sourceLink: document.querySelector('#player-source-link'),
-  title: document.querySelector('#player-title'),
-  artist: document.querySelector('#player-artist'),
-  play: document.querySelector('#player-play'),
-  prev: document.querySelector('#player-prev'),
-  next: document.querySelector('#player-next'),
-  seek: document.querySelector('#player-seek'),
-  current: document.querySelector('#player-current'),
-  duration: document.querySelector('#player-duration'),
-  volume: document.querySelector('#player-volume'),
-  titleCurrent: null,
-  titleNextLabel: null,
-  titleNextTrack: null
+
+const icons = {
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+  back: '<path d="m14.5 5-7 7 7 7"/><path d="M8 12h12"/>',
+  open: '<path d="M14 5h5v5"/><path d="m19 5-9 9"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
+  download: '<path d="M12 4v11"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M5 19h14"/>',
+  gallery: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m5 17 4.5-4.5 3 3 2-2 4.5 4.5"/>',
+  tag: '<path d="m4 5.5 7-1.5 8.5 8.5-6.5 6.5L4.5 10.5z"/><circle cx="8.2" cy="8.2" r="1"/>',
+  content: '<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4.5"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 10.5v5"/><path d="M12 7.5h.01"/>',
+  warning: '<path d="m12 4 8 15H4z"/><path d="M12 9.5v4"/><path d="M12 16.5h.01"/>',
+  guide: '<circle cx="12" cy="12" r="9"/><path d="M12 16V9.5a2 2 0 0 0-2-2H7.5v8H10a2 2 0 0 1 2 2"/><path d="M12 16V9.5a2 2 0 0 1 2-2h2.5v8H14a2 2 0 0 0-2 2"/>',
+  computer: '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M9 20h6M12 16v4"/>',
+  phone: '<rect x="7" y="3.5" width="10" height="17" rx="2"/><path d="M10 17.5h4"/>',
+  tv: '<rect x="3.5" y="6" width="17" height="11.5" rx="2"/><path d="m9 3 3 3 3-3"/>',
+  linux: '<circle cx="12" cy="12" r="8.5"/><path d="M8 15c2-2 6-2 8 0M9.5 10h.01M14.5 10h.01"/>',
+  web: '<circle cx="12" cy="12" r="8.5"/><path d="M3.8 12h16.4M12 3.5c2.2 2.4 3.2 5.2 3.2 8.5S14.2 18.1 12 20.5C9.8 18.1 8.8 15.3 8.8 12S9.8 5.9 12 3.5z"/>',
+  tablet: '<rect x="5.5" y="3.5" width="13" height="17" rx="2"/><path d="M10 17.5h4"/>',
+  devices: '<rect x="3.5" y="5.5" width="11" height="9" rx="1.5"/><path d="M7 18h4M9 14.5V18"/><rect x="16.5" y="9" width="4" height="8" rx="1"/>',
+  category: '<path d="M4 7.5V18a2 2 0 0 0 2 2h10.5a2 2 0 0 0 1.8-2.9L13 6H6a2 2 0 0 0-2 2z"/><path d="M4 8h8.5a2 2 0 0 1 1.8 1.1L16 14"/>'
 };
-function formatTime(seconds) {
-  if (!Number.isFinite(seconds)) return '0:00';
-  const safe = Math.max(0, Math.floor(seconds));
-  return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`;
-}
-function trackCover(track) {
-  return track?.cover || '';
-}
-function mapSound(sound) {
-  return {
-    title: sound?.title || 'Faixa sem título',
-    artist: sound?.publisher_metadata?.artist || sound?.user?.username || 'SUI UZI',
-    src: sound?.permalink_url || '',
-    officialUrl: sound?.permalink_url || SOUNDCLOUD_PROFILE_URL,
-    // Never fall back to the user's avatar: for tracks without artwork it can make
-    // the next-track artwork look like the current track.
-    cover: sound?.artwork_url || '',
-    duration: Number.isFinite(sound?.duration) ? sound.duration : 0
-  };
-}
-function coverCandidates(source) {
-  const url = String(source || '').trim();
-  if (!url) return [];
-  const variants = [url];
-  // SoundCloud commonly exposes thumbnail URLs using -large or -t{n}x{n}.
-  // Try the 500x500 variant first when the supplied URL uses a replaceable size.
-  const highRes = url.replace(/-(?:large|t\d+x\d+|crop)(?=(?:\.[a-z0-9]+)?(?:[?#]|$))/i, '-t500x500');
-  if (highRes !== url) variants.unshift(highRes);
-  return [...new Set(variants)];
-}
-function setArtImage(image, track, missingAlt) {
-  if (!image) return;
-  const candidates = coverCandidates(trackCover(track));
-  const token = `${track?.src || ''}|${candidates.join('|')}`;
-  image.dataset.coverToken = token;
-  image.hidden = true;
-  image.alt = missingAlt;
-  image.onload = () => {
-    if (image.dataset.coverToken === token) image.hidden = false;
-  };
-  image.onerror = () => {
-    if (image.dataset.coverToken !== token) return;
-    candidates.shift();
-    if (candidates.length) {
-      image.src = candidates[0];
-      return;
-    }
-    image.hidden = true;
-  };
-  image.removeAttribute('src');
-  if (candidates.length) image.src = candidates[0];
-}
-function preloadNextTrackCover() {
-  const next = player.tracks[player.index + 1];
-  const candidates = coverCandidates(trackCover(next));
-  if (!candidates.length) return;
-  const image = new Image();
-  image.decoding = 'async';
-  let index = 0;
-  const tryNext = () => {
-    if (index >= candidates.length) return;
-    image.src = candidates[index++];
-  };
-  image.onerror = tryNext;
-  tryNext();
+
+function icon(name) {
+  const content = icons[name] || icons.tag;
+  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${content}</svg>`;
 }
 
-function updateMediaSession(track) {
-  if (!('mediaSession' in navigator) || !track) return;
-  const cover = trackCover(track);
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: track.title,
-    artist: track.artist || 'SUI UZI',
-    album: 'SUI UZI • SoundCloud',
-    artwork: cover ? [{ src: cover, sizes: '512x512', type: 'image/jpeg' }] : []
-  });
-}
-function preparePlayerTitleStage() {
-  const title = playerElements.title;
-  if (!title || title.dataset.stageReady === 'true') return;
-  title.dataset.stageReady = 'true';
-  title.classList.add('player-title-stage');
-  title.innerHTML = `
-    <span class="player-title-current"></span>
-    <span class="player-title-next-label"><iconify-icon icon="solar:arrow-right-linear" aria-hidden="true"></iconify-icon><span>Próxima música</span></span>
-    <span class="player-title-next-track"></span>
-  `;
-  playerElements.titleCurrent = title.querySelector('.player-title-current');
-  playerElements.titleNextLabel = title.querySelector('.player-title-next-label');
-  playerElements.titleNextTrack = title.querySelector('.player-title-next-track');
-}
-function setPlayerArt(track, nextTrack = null) {
-  if (!playerElements.art || !track) return;
-  const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
-  if (playerElements.artCurrent) {
-    setArtImage(playerElements.artCurrent, track, 'Sem capa disponível');
-  }
-  if (playerElements.artNext) {
-    if (nextTrack) {
-      setArtImage(playerElements.artNext, nextTrack, 'Sem próxima capa disponível');
-    } else {
-      playerElements.artNext.dataset.coverToken = '';
-      playerElements.artNext.removeAttribute('src');
-      playerElements.artNext.hidden = true;
-    }
-  }
-  if (playerElements.artIcon) {
-    playerElements.artIcon.hidden = !coverCandidates(trackCover(track)).length;
-  }
-  playerElements.art.href = officialUrl;
-  playerElements.art.classList.add('has-link');
-  playerElements.art.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
-}
 
-function resetMiniNextNotice() {
-  clearTimeout(player.miniNoticeTimer);
-  player.miniNoticeTimer = null;
-  if (!playerElements.title) return;
-  playerElements.title.classList.remove(
-    'is-next-label',
-    'is-next-title',
-    'is-returning',
-    'no-transition'
-  );
-  playerElements.art?.classList.remove(
-    'is-next-title',
-    'is-returning',
-    'no-transition'
-  );
-  const current = player.tracks[player.index];
-  if (current) setPlayerArt(current, null);
-}
-function scheduleMiniNextNotice() {
-  const next = player.tracks[player.index + 1];
-  if (!next?.title || !player.ready || !player.playing || !player.miniNoticePending) return;
-  if (player.miniNoticeTrack === player.index) return;
-  resetMiniNextNotice();
-  player.miniNoticeTrack = player.index;
-  player.miniNoticePending = false;
-  playerElements.titleNextTrack.textContent = next.title;
-  const current = player.tracks[player.index];
-  if (current) setPlayerArt(current, next);
-  preloadNextTrackCover();
-  player.miniNoticeTimer = setTimeout(() => {
-    const playerElement = document.querySelector('#music-player');
-    if (!playerElement?.classList.contains('is-mini') || !player.playing) return;
-    playerElements.title.classList.add('is-next-label');
-    player.miniNoticeTimer = setTimeout(() => {
-      if (!player.playing) {
-        resetMiniNextNotice();
-        return;
-      }
-      playerElements.title.classList.remove('is-next-label');
-      playerElements.title.classList.add('is-next-title');
-      if (playerElements.art) {
-        playerElements.art.classList.add('is-next-title');
-      }
-      player.miniNoticeTimer = setTimeout(() => {
-        if (!player.playing) {
-          resetMiniNextNotice();
-          return;
-        }
-        playerElements.title.classList.remove('is-next-title');
-        playerElements.title.classList.add('is-returning');
-        if (playerElements.art) {
-          playerElements.art.classList.remove('is-next-title');
-          playerElements.art.classList.add('is-returning');
-        }
-        player.miniNoticeTimer = setTimeout(() => {
-          playerElements.title.classList.add('no-transition');
-          playerElements.title.classList.remove('is-returning');
-          if (playerElements.art) {
-            playerElements.art.classList.add('no-transition');
-            playerElements.art.classList.remove('is-returning');
-          }
-          void playerElements.title.offsetWidth;
-          if (playerElements.art) void playerElements.art.offsetWidth;
-          playerElements.title.classList.remove('no-transition');
-          if (playerElements.art) {
-            playerElements.art.classList.remove('no-transition');
-          }
-        }, 500);
-      }, 3450);
-    }, 2400);
-  }, 10000);
-}
-function setPlayerCompact(compact = true) {
-  const playerElement = document.querySelector('#music-player');
-  if (!playerElement) return;
-  playerElement.classList.toggle('is-mini', compact);
-}
-function expandPlayer() {
-  const playerElement = document.querySelector('#music-player');
-  if (!playerElement) return;
-  clearTimeout(player.collapseTimer);
-  playerElement.classList.remove('is-mini');
-  resetMiniNextNotice();
-}
-function schedulePlayerCollapse(delay = 2600) {
-  const playerElement = document.querySelector('#music-player');
-  if (!playerElement) return;
-  clearTimeout(player.collapseTimer);
-  player.collapseTimer = setTimeout(() => {
-    if (playerElement.matches(':hover')) {
-      schedulePlayerCollapse(450);
-      return;
-    }
-    setPlayerCompact(true);
-  }, delay);
-}
-function updateNavigation() {
-  const hasTracks = player.tracks.length > 0;
-  const canSkip = player.tracks.length > 1;
-  [playerElements.prev, playerElements.next].forEach(button => {
-    button.disabled = !canSkip;
-    button.setAttribute('aria-disabled', String(!canSkip));
-  });
-  playerElements.play.disabled = !hasTracks;
-}
-function updatePlayer() {
-  const track = player.tracks[player.index];
-  if (!track) {
-    const title = player.error ? 'SoundCloud indisponível' : (player.ready ? 'Nenhuma faixa disponível' : 'Carregando músicas...');
-    const artist = player.error ? 'Não foi possível carregar as faixas' : (player.ready ? 'SUI UZI' : 'Conectando ao SoundCloud');
-    if (playerElements.titleCurrent) playerElements.titleCurrent.textContent = title;
-    else playerElements.title.textContent = title;
-    playerElements.artist.textContent = artist;
-    playerElements.play.innerHTML = '<iconify-icon icon="solar:play-linear"></iconify-icon>';
-    updateNavigation();
-    return;
-  }
-  const officialUrl = /^https?:\/\//i.test(track.officialUrl || '') ? track.officialUrl : SOUNDCLOUD_PROFILE_URL;
-  if (playerElements.titleCurrent) {
-    playerElements.titleCurrent.textContent = track.title;
-  } else {
-    playerElements.title.textContent = track.title;
-  }
-  playerElements.artist.textContent = track.artist || 'SUI UZI';
-  playerElements.titleLink.href = officialUrl;
-  playerElements.titleLink.classList.add('has-link');
-  playerElements.titleLink.setAttribute('aria-label', `Abrir ${track.title} no SoundCloud`);
-  playerElements.sourceLink.href = officialUrl;
-  setPlayerArt(track);
-  playerElements.play.innerHTML = `<iconify-icon icon="${player.playing ? 'solar:pause-linear' : 'solar:play-linear'}"></iconify-icon>`;
-  playerElements.play.setAttribute('aria-label', player.playing ? 'Pausar' : 'Reproduzir');
-  playerElements.play.title = player.playing ? 'Pausar' : 'Reproduzir';
-  playerElements.seek.value = 0;
-  playerElements.current.textContent = '0:00';
-  playerElements.duration.textContent = formatTime((track.duration || player.duration || 0) / 1000);
-  if (track.duration) player.duration = track.duration;
-  updateNavigation();
-  updateMediaSession(track);
-}
-function syncCurrentSound(onDone) {
-  if (!player.widget) return;
-  player.widget.getCurrentSoundIndex(index => {
-    if (Number.isInteger(index) && index >= 0 && index < player.tracks.length) {
-      player.index = index;
-    }
-    player.widget.getCurrentSound(sound => {
-      if (sound) {
-        const mapped = mapSound(sound);
-        player.tracks[player.index] = { ...(player.tracks[player.index] || {}), ...mapped };
-        player.duration = mapped.duration || player.duration;
-      }
-      if (onDone) onDone();
-    });
-  });
-}
-function syncTrackList() {
-  if (!player.widget) return;
-  player.widget.getSounds(sounds => {
-    player.error = false;
-    player.tracks = Array.isArray(sounds) ? sounds.map(mapSound).filter(track => track.src) : [];
-    player.index = 0;
-    player.duration = player.tracks[0]?.duration || 0;
-    preloadNextTrackCover();
-    syncCurrentSound(() => {
-      player.ready = true;
-      updatePlayer();
-    });
-  });
-}
-function selectTrack(index, autoplay = false) {
-  if (!player.widget || !player.tracks.length) return;
-  player.index = (index + player.tracks.length) % player.tracks.length;
-  player.miniNoticePending = Boolean(player.tracks[player.index + 1]);
-  player.miniNoticeTrack = null;
-  resetMiniNextNotice();
-  player.duration = player.tracks[player.index]?.duration || 0;
-  preloadNextTrackCover();
-  playerElements.seek.value = 0;
-  playerElements.current.textContent = '0:00';
-  updatePlayer();
-  const target = player.index;
-  if (typeof player.widget.skip === 'function') {
-    player.widget.skip(target);
-    if (autoplay) player.widget.play();
-  } else {
-    const track = player.tracks[target];
-    if (!track?.src) return;
-    player.widget.load(track.src, {
-      auto_play: autoplay,
-      show_artwork: false,
-      hide_related: true,
-      show_comments: false,
-      show_user: false,
-      show_reposts: false,
-      visual: false
-    });
-  }
-  player.playing = autoplay;
-  updatePlayer();
-}
-function wakePlayer(pointerType = '') {
-  expandPlayer();
-  if (pointerType && pointerType !== 'mouse') schedulePlayerCollapse(3200);
-}
-function setupPlayer() {
-  const frame = document.querySelector('#soundcloud-player');
-  if (!frame || !window.SC?.Widget) return;
-  const playerElement = document.querySelector('#music-player');
-  preparePlayerTitleStage();
-  setPlayerCompact(true);
-  updatePlayer();
-  playerElement.addEventListener('pointerenter', event => {
-    if (event.pointerType === 'mouse' || !event.pointerType) expandPlayer();
-  }, { passive: true });
-  playerElement.addEventListener('pointerleave', event => {
-    if (event.pointerType === 'mouse' || !event.pointerType) schedulePlayerCollapse(450);
-  }, { passive: true });
-  playerElement.addEventListener('pointerdown', event => wakePlayer(event.pointerType), { passive: true });
-  playerElement.addEventListener('keydown', () => wakePlayer('keyboard'), { passive: true });
-  playerElement.addEventListener('focusin', () => {
-    expandPlayer();
-    schedulePlayerCollapse(3200);
-  });
-  const params = new URLSearchParams({
-    url: SOUNDCLOUD_PROFILE_URL,
-    color: '#d2f36b',
-    auto_play: 'false',
-    hide_related: 'true',
-    show_comments: 'false',
-    show_user: 'false',
-    show_reposts: 'false',
-    show_artwork: 'false',
-    visual: 'false'
-  });
-  frame.src = `https://w.soundcloud.com/player/?${params.toString()}`;
-  player.widget = window.SC.Widget(frame);
-  player.widget.bind(window.SC.Widget.Events.READY, () => {
-    player.error = false;
-    player.widget.setVolume(Number(playerElements.volume.value) * 100);
-    syncTrackList();
-  });
-  player.widget.bind(window.SC.Widget.Events.PLAY, () => {
-    player.playing = true;
-    syncCurrentSound(() => {
-      player.widget.getDuration(duration => {
-        if (Number.isFinite(duration) && duration > 0) player.duration = duration;
-        updatePlayer();
-        scheduleMiniNextNotice();
-      });
-    });
-  });
-  player.widget.bind(window.SC.Widget.Events.PAUSE, () => {
-    player.playing = false;
-    resetMiniNextNotice();
-    updatePlayer();
-  });
-  player.widget.bind(window.SC.Widget.Events.FINISH, () => {
-    if (player.index + 1 < player.tracks.length) {
-      selectTrack(player.index + 1, true);
-    } else {
-      player.playing = false;
-      player.miniNoticePending = false;
-      player.miniNoticeTrack = null;
-      resetMiniNextNotice();
-      updatePlayer();
-    }
-  });
-  player.widget.bind(window.SC.Widget.Events.PLAY_PROGRESS, data => {
-    if (!player.ready) return;
-    const position = Number(data?.currentPosition) || 0;
-    const relative = Number(data?.relativePosition) || 0;
-    if (!player.duration && relative > 0) {
-      player.duration = position / relative;
-    }
-    playerElements.current.textContent = formatTime(position / 1000);
-    playerElements.duration.textContent = formatTime(player.duration / 1000);
-    playerElements.seek.value = Math.max(0, Math.min(100, relative * 100));
-  });
-  player.widget.bind(window.SC.Widget.Events.ERROR, () => {
-    player.ready = true;
-    player.error = true;
-    player.playing = false;
-    player.miniNoticePending = false;
-    player.miniNoticeTrack = null;
-    resetMiniNextNotice();
-    updatePlayer();
-  });
-  playerElements.play.addEventListener('click', event => {
-    wakePlayer(event.detail === 0 ? 'keyboard' : 'mouse');
-    if (!player.widget || !player.tracks.length) return;
-    if (player.playing) player.widget.pause();
-    else player.widget.play();
-  });
-  playerElements.prev.addEventListener('click', event => {
-    wakePlayer(event.detail === 0 ? 'keyboard' : 'mouse');
-    selectTrack(player.index - 1, true);
-  });
-  playerElements.next.addEventListener('click', event => {
-    wakePlayer(event.detail === 0 ? 'keyboard' : 'mouse');
-    selectTrack(player.index + 1, true);
-  });
-  playerElements.seek.addEventListener('input', () => {
-    wakePlayer('keyboard');
-    if (player.widget && player.duration) {
-      player.widget.seekTo((Number(playerElements.seek.value) / 100) * player.duration);
-    }
-  });
-  playerElements.volume.addEventListener('input', () => {
-    wakePlayer('keyboard');
-    if (player.widget) {
-      player.widget.setVolume(Number(playerElements.volume.value) * 100);
-    }
-  });
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.setActionHandler('play', () => player.widget?.play());
-    navigator.mediaSession.setActionHandler('pause', () => player.widget?.pause());
-    navigator.mediaSession.setActionHandler('previoustrack', () => selectTrack(player.index - 1, true));
-    navigator.mediaSession.setActionHandler('nexttrack', () => selectTrack(player.index + 1, true));
-  }
-}
-const normalize = (value) => String(value ?? '')
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .toLowerCase().replace(/[^a-z0-9\s]+/g, ' ').replace(/\s+/g, ' ').trim();
 function editDistance(a, b) {
   if (a === b) return 0;
   if (!a) return b.length;
   if (!b) return a.length;
-  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i++) {
-    let prev = row[0];
+
+  const row = Array.from({ length: b.length + 1 }, (_, index) => index);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    let previous = row[0];
     row[0] = i;
-    for (let j = 1; j <= b.length; j++) {
-      const temp = row[j];
-      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i-1] === b[j-1] ? 0 : 1));
-      prev = temp;
+
+    for (let j = 1; j <= b.length; j += 1) {
+      const current = row[j];
+      row[j] = Math.min(
+        row[j] + 1,
+        row[j - 1] + 1,
+        previous + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+      previous = current;
     }
   }
+
   return row[b.length];
 }
-function fuzzyScore(query, item) {
-  const q = normalize(query);
-  if (!q) return 0;
+
+function fuzzyScore(search, item) {
+  const query = normalize(search);
+  if (!query) return 0;
+
   const title = normalize(item.Title);
   const aliases = (item.aliases || []).map(normalize);
-  const hay = [title, ...aliases, normalize(item.Description)].filter(Boolean);
+  const category = normalize(item.Category);
+  const description = normalize(item.Description);
+  const fields = [title, ...aliases, category, description].filter(Boolean);
   let best = 0;
-  for (const text of hay) {
-    if (text === q) best = Math.max(best, 1.0);
-    if (text.includes(q)) best = Math.max(best, 0.92 - Math.min(.2, (text.length-q.length)/500));
+
+  for (const text of fields) {
+    if (text === query) best = Math.max(best, 1);
+    if (text.includes(query)) {
+      best = Math.max(best, 0.92 - Math.min(0.2, (text.length - query.length) / 500));
+    }
+
     for (const word of text.split(/\s+/)) {
-      const d = editDistance(q, word);
-      const score = 1 - d / Math.max(q.length, word.length, 1);
+      const distance = editDistance(query, word);
+      const score = 1 - distance / Math.max(query.length, word.length, 1);
       best = Math.max(best, score * (text === title ? 0.98 : 0.86));
     }
   }
-  const parts = q.split(/\s+/).filter(Boolean);
+
+  const parts = query.split(/\s+/).filter(Boolean);
   if (parts.length > 1) {
-    let matched = 0;
-    for (const part of parts) {
-      if (hay.some(t => t.includes(part) || t.split(/\s+/).some(w => 1 - editDistance(part,w)/Math.max(part.length,w.length,1) > .62))) matched++;
-    }
-    best = Math.max(best, (matched / parts.length) * .85);
+    const matched = parts.filter(part => fields.some(field => (
+      field.includes(part) ||
+      field.split(/\s+/).some(word => 1 - editDistance(part, word) / Math.max(part.length, word.length, 1) > 0.62)
+    ))).length;
+    best = Math.max(best, matched / parts.length * 0.85);
   }
+
   return best;
 }
+
 function loadCatalog() {
-  const catalog = window.ESSENTIALS_ITEMS;
-  if (!Array.isArray(catalog)) throw new Error('items');
-  state.items = catalog;
+  if (!Array.isArray(window.ESSENTIALS_ITEMS)) throw new Error('items');
+  state.items = window.ESSENTIALS_ITEMS;
 }
-function escapeHTML(s) {
-  return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[character]));
 }
+
 function logoMarkup(source) {
   const value = String(source ?? '').trim();
   if (!value) return '';
+
   if (/^https?:\/\//i.test(value)) {
-    return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy">`;
+    return `<img class="card-logo" src="${escapeHTML(value)}" alt="" loading="lazy" decoding="async">`;
   }
+
   const svg = value.startsWith('<svg')
     ? value.replace(/currentColor/gi, '#fff')
     : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 66.145831 61.515624"><path d="${escapeHTML(value)}" fill="#fff"></path></svg>`;
-  const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  return `<img class="card-logo" src="${escapeHTML(dataUri)}" alt="" loading="lazy">`;
+
+  return `<img class="card-logo" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}" alt="" loading="lazy" decoding="async">`;
 }
-function markdownInline(value) {
-  let text = escapeHTML(value);
-  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
-  text = text.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi, '<img src="$2" alt="$1" loading="lazy">');
-  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-  text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  text = text.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-  text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  text = text.replace(/_([^_]+)_/g, '<em>$1</em>');
-  return text;
+
+function markdownInline(value, { allowLinks = true } = {}) {
+  const tokens = [];
+  const stash = html => {
+    const key = `\uE000K${tokens.length}\uE001`;
+    tokens.push(html);
+    return key;
+  };
+
+  let text = String(value ?? '');
+
+  // Protect inline code before applying emphasis/link rules.
+  text = text.replace(/`([^`\n]+)`/g, (_, code) => stash(`<code>${escapeHTML(code)}</code>`));
+  text = escapeHTML(text);
+
+  // Markdown images and links are converted before emphasis, then restored last.
+  text = text.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi, (_, alt, url) => (
+    stash(`<img src="${url}" alt="${escapeHTML(alt)}" loading="lazy" decoding="async">`)
+  ));
+
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_, label, url) => {
+    if (!allowLinks) return label;
+    return stash(`<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+  });
+
+  text = text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>');
+
+  if (allowLinks) {
+    text = text.replace(/(^|[\s(])((?:https?:\/\/|www\.)[^\s<]+)/gi, (_, prefix, rawUrl) => {
+      const match = rawUrl.match(/^(.*?)([.,!?;:]+)?(?:\)+|\]+)?$/);
+      const cleanUrl = (match?.[1] || rawUrl).trim();
+      const trailing = rawUrl.slice(cleanUrl.length);
+      if (!cleanUrl) return prefix + rawUrl;
+
+      const href = /^www\./i.test(cleanUrl) ? `https://${cleanUrl}` : cleanUrl;
+      return `${prefix}${stash(`<a href="${href}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>`)}${trailing}`;
+    });
+  }
+
+  return text.replace(/\uE000K(\d+)\uE001/g, (_, index) => tokens[Number(index)] || '');
 }
-function markdownHTML(value) {
+
+function markdownHTML(value, options = {}) {
   const lines = String(value ?? '').replace(/\r/g, '').split('\n');
   const output = [];
-  let list = false;
-  let code = false;
+  let listOpen = false;
+  let inCode = false;
   let codeLines = [];
+
   const closeList = () => {
-    if (list) {
-      output.push('</ul>');
-      list = false;
-    }
+    if (!listOpen) return;
+    output.push('</ul>');
+    listOpen = false;
   };
+
   for (const line of lines) {
     if (line.trim().startsWith('```')) {
-      if (code) {
+      if (inCode) {
         output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
         codeLines = [];
       }
-      code = !code;
+      inCode = !inCode;
       closeList();
       continue;
     }
-    if (code) {
+
+    if (inCode) {
       codeLines.push(line);
       continue;
     }
+
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    const bullet = line.match(/^\s*[-*]\s+(.+)$/);
+    const marker = line.match(/^\s*[-*]\s+(.+)$/);
+    const quote = line.match(/^\s*>\s?(.+)$/);
+
     if (heading) {
       closeList();
-      output.push(`<h${heading[1].length}>${markdownInline(heading[2])}</h${heading[1].length}>`);
+      const level = heading[1].length;
+      output.push(`<h${level}>${markdownInline(heading[2], options)}</h${level}>`);
       continue;
     }
-    if (bullet) {
-      if (!list) {
+
+    if (marker) {
+      if (!listOpen) {
         output.push('<ul>');
-        list = true;
+        listOpen = true;
       }
-      output.push(`<li>${markdownInline(bullet[1])}</li>`);
+      output.push(`<li>${markdownInline(marker[1], options)}</li>`);
       continue;
     }
+
+    if (quote) {
+      closeList();
+      output.push(`<blockquote>${markdownInline(quote[1], options)}</blockquote>`);
+      continue;
+    }
+
     closeList();
-    if (line.trim()) output.push(`<p>${markdownInline(line)}</p>`);
+    if (line.trim()) output.push(`<p>${markdownInline(line, options)}</p>`);
   }
-  if (code) output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
+
+  if (inCode) output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
   closeList();
+
   return output.join('');
 }
-function renderError(code = '500') {
-  app.innerHTML = `<section class="error-screen" role="alert">
-    <div class="error-icon" aria-hidden="true"><iconify-icon icon="solar:danger-triangle-bold"></iconify-icon></div>
-    <div class="error-code">${escapeHTML(code)}</div>
-    <h1>OCORREU UM ERRO</h1>
-    <p>Infelizmente, o site possui algum problema. Isso será resolvido em breve.</p>
-    <a class="error-back" href="#/">Voltar ao catálogo</a>
-  </section>`;
+
+function normalizeCategory(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ');
 }
-function categoryList() {
-  const cats = [...new Set(state.items.map(i => i.Category).filter(Boolean))].sort();
-  return ['TODOS', ...cats];
-}
-function filteredItems() {
-  let arr = state.items.slice();
-  if (state.category !== 'TODOS') arr = arr.filter(i => i.Category === state.category);
-  if (state.query.trim()) {
-    arr = arr.map(i => ({i, score: fuzzyScore(state.query, i)})).filter(x => x.score >= .48).sort((a,b)=>b.score-a.score).map(x=>x.i);
-  } else {
-    arr.sort((a,b) => (a.Title||'').localeCompare(b.Title||'', 'pt-BR'));
-  }
-  return arr;
-}
-function renderHome() {
-  const items = filteredItems();
-  app.innerHTML = `
-    <section class="hero">
-      <div class="hero-copy">
-        <h1>Bufus<br><em>Essentials</em></h1>
-        <p>Uma seleção de recursos essenciais reunidos em um só lugar.</p>
-      </div>
-    </section>
-    <section class="search-shell">
-      <div class="searchbox">
-        <div class="search-field"><iconify-icon icon="solar:magnifer-linear" aria-hidden="true"></iconify-icon><input id="search" autocomplete="off" spellcheck="false" placeholder="Pesquisar no catálogo" value="${escapeHTML(state.query)}" aria-label="Pesquisar"></div>
-      </div>
-    </section>
-    <div class="catalog-tools" id="catalog">
-      <div class="filters">${categoryList().map(c=>`<button class="filter ${c===state.category?'active':''}" data-cat="${escapeHTML(c)}">${escapeHTML(c)}</button>`).join('')}</div>
-      <div class="result-meta">${items.length} resultado${items.length===1?'':'s'} ${state.query ? `para “${escapeHTML(state.query)}”` : ''}</div>
-    </div>
-    <section class="grid">
-      ${items.length ? items.map(cardHTML).join('') : '<div class="empty">Nenhum resultado encontrado.</div>'}
-    </section>`;
-  const input = document.querySelector('#search');
-  input.addEventListener('input', e => {
-    state.query = e.target.value;
-    renderHome();
-    document.querySelector('#search')?.focus();
-    document.querySelector('#search')?.setSelectionRange(state.query.length,state.query.length);
+
+function categories() {
+  const map = new Map();
+
+  state.items.forEach(item => {
+    const category = normalizeCategory(item.Category);
+    if (category && !map.has(category.toLowerCase())) map.set(category.toLowerCase(), category);
   });
-  document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{
-    state.category=b.dataset.cat;
-    renderHome();
-  }));
+
+  return ['TODOS', ...Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
 }
-function platformMap() {
+
+function platformsMap() {
   return {
-    pc: { label: 'PC', icon: 'mdi:desktop-classic' },
-    android: { label: 'Android', icon: 'mdi:cellphone-android' },
-    ios: { label: 'iOS', icon: 'mdi:apple-ios' },
-    tv: { label: 'TV', icon: 'mdi:television' },
-    linux: { label: 'Linux', icon: 'mdi:linux' },
-    web: { label: 'Web', icon: 'mdi:web' },
-    tablet: { label: 'Tablet', icon: 'mdi:tablet-android' },
-    outros: { label: 'Outros', icon: 'mdi:devices' }
+    pc: { label: 'PC', icon: 'computer' },
+    android: { label: 'Android', icon: 'phone' },
+    ios: { label: 'iOS', icon: 'phone' },
+    tv: { label: 'TV', icon: 'tv' },
+    linux: { label: 'Linux', icon: 'linux' },
+    web: { label: 'Web', icon: 'web' },
+    tablet: { label: 'Tablet', icon: 'tablet' },
+    other: { label: 'Outros', icon: 'devices' }
   };
 }
-function normalizePlatformKey(value) {
+
+function normalizePlatform(value) {
   const key = String(value ?? '').trim().toLowerCase();
   if (!key) return '';
-  if (key === 'android-tv') return 'tv';
+  if (key === 'android-tv' || key.includes('smarttv') || key.includes('androidtv') || key === 'tv' || key.includes('television')) return 'tv';
   if (key.includes('pc') || key.includes('desktop') || key.includes('windows')) return 'pc';
   if (key.includes('android')) return 'android';
   if (key.includes('ios') || key.includes('iphone') || key.includes('ipad')) return 'ios';
-  if (key.includes('tv') || key.includes('smarttv') || key.includes('androidtv')) return 'tv';
   if (key.includes('linux')) return 'linux';
   if (key.includes('web') || key.includes('browser')) return 'web';
   if (key.includes('tablet')) return 'tablet';
-  return 'outros';
+  return 'other';
 }
+
 function platformBadges(platforms) {
-  const values = Array.isArray(platforms) ? platforms : (typeof platforms === 'string' ? platforms.split(/[\n,;]+/) : []);
-  const unique = [...new Set(values.map(value => normalizePlatformKey(value)).filter(Boolean))];
-  if (!unique.length) return '';
-  const map = platformMap();
+  const values = Array.isArray(platforms)
+    ? platforms
+    : typeof platforms === 'string'
+      ? platforms.split(/[\n,;]+/)
+      : [];
+  const unique = [...new Set(values.map(normalizePlatform).filter(Boolean))];
+  const map = platformsMap();
+
   return unique.map(key => {
-    const meta = map[key] || { label: key, icon: 'mdi:circle-medium' };
-    return `<span class="platform-badge"><iconify-icon icon="${meta.icon}" aria-hidden="true"></iconify-icon><span>${escapeHTML(meta.label)}</span></span>`;
+    const meta = map[key] || { label: key, icon: 'tag' };
+    const platformIcon = key === 'linux'
+      ? `<img class="platform-logo-linux" src="https://api.iconify.design/simple-icons:linux.svg?color=%23FCC624" alt="" aria-hidden="true" loading="lazy" decoding="async">`
+      : icon(meta.icon);
+    return `<span class="platform-badge">${platformIcon}<span>${escapeHTML(meta.label)}</span></span>`;
   }).join('');
 }
+
 function cardDescriptionHTML(value) {
-  const withoutLinks = String(value ?? '').replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/gi, '$1');
-  return markdownHTML(withoutLinks);
+  return markdownHTML(String(value ?? ''), { allowLinks: false });
 }
-function cardHTML(item) {
+
+function cardHTML(item, index = 0) {
   const banner = item.Banner || item.banner || (Array.isArray(item.Image) ? item.Image[0] : item.Image);
   const logo = item.Logo || item.logo;
-  return `<a class="card" href="#/item/${encodeURIComponent(item.slug)}">
-    ${banner ? `<div class="card-media"><img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy"></div>` : ''}
+  const platforms = platformBadges(item.Platforms);
+  const category = normalizeCategory(item.Category);
+
+  return `<a class="card" style="--card-index:${index}" href="#/item/${encodeURIComponent(item.slug)}">
+    ${banner ? `<div class="card-media"><img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy" decoding="async"></div>` : ''}
     <div class="card-content">
       <div class="card-meta">
-        ${item.Category ? `<div class="card-category">${escapeHTML(item.Category)}</div>` : ''}
-        ${platformBadges(item.Platforms) ? `<div class="card-platforms">${platformBadges(item.Platforms)}</div>` : ''}
+        ${category ? `<div class="card-category">${icon('tag')}<span>${escapeHTML(category)}</span></div>` : ''}
+        ${platforms ? `<div class="card-platforms">${platforms}</div>` : ''}
       </div>
-      <div class="card-title-row">${logoMarkup(logo)}<h2>${escapeHTML(item.Title)}</h2></div>
+      <div class="card-title-row">
+        ${logoMarkup(logo)}
+        <h2>${escapeHTML(item.Title)}</h2>
+      </div>
       <div class="card-description markdown">${cardDescriptionHTML(item.Description)}</div>
     </div>
-    <div class="card-foot"><span>ABRIR</span><iconify-icon class="arrow" icon="solar:arrow-up-right-linear" aria-hidden="true"></iconify-icon></div>
+    <div class="card-foot"><span>${SITE_TEXTS.openAction}</span>${icon('open')}</div>
   </a>`;
 }
-function marqueeBar(type, text, extraText) {
-  const cls = type === 'warn' ? 'warn-bar' : type === 'info' ? 'info-bar' : 'removed-bar';
-  const icon = type === 'warn' ? 'solar:danger-triangle-linear' : type === 'info' ? 'solar:info-circle-linear' : 'solar:close-circle-linear';
-  return `<div class="dynamic-bar ${cls}">
-    <button data-expand="${type}"><div class="marquee-row"><iconify-icon class="notice-icon" icon="${icon}" aria-hidden="true"></iconify-icon><div class="marquee-clip"><div class="marquee-track" data-marquee><div class="marquee-group"><span>${escapeHTML(text)}</span></div></div></div></div></button>
-    ${extraText ? `<div class="expand" id="expand-${type}"><div class="expand-inner markdown">${markdownHTML(extraText)}</div></div>` : ''}
+
+function noticeIcon(type) {
+  return type === 'guide' ? 'guide' : type === 'info' ? 'info' : 'warning';
+}
+
+function marqueeBar(type, text, content) {
+  const className = type === 'warn' ? 'warn-bar' : type === 'info' ? 'info-bar' : 'removed-bar critical-bar';
+  const label = escapeHTML(text);
+
+  return `<div class="dynamic-bar ${className}" data-marquee-bar>
+    <button class="notice-button" data-expand="${escapeHTML(type)}" type="button" aria-expanded="false">
+      <span class="notice-main">
+        <span class="notice-icon" aria-hidden="true">${icon(noticeIcon(type))}</span>
+        <span class="notice-label marquee-label">
+          <span class="marquee-clip"><span class="marquee-track" data-marquee><span class="marquee-group"><span>${label}</span><span class="marquee-separator" aria-hidden="true">•</span></span></span></span>
+        </span>
+      </span>
+      <span class="notice-chevron" aria-hidden="true">+</span>
+    </button>
+    ${content ? `<div class="expand" id="expand-${escapeHTML(type)}"><div class="expand-inner markdown">${markdownHTML(content)}</div></div>` : ''}
   </div>`;
 }
+
+function summarizeNotice(value, maxLength = 150) {
+  const source = String(value ?? '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/[*_`#>-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!source) return 'Clique para abrir e ver o conteúdo completo.';
+  if (source.length <= maxLength) return source;
+  return `${source.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
 function detailBarWithFlip(type, shortText, longText) {
-  const cls = type === 'warn' ? 'warn-bar' : 'info-bar';
-  const icon = type === 'warn' ? 'solar:danger-triangle-linear' : type === 'guia' ? 'solar:book-2-linear' : 'solar:info-circle-linear';
-  return `<div class="dynamic-bar ${cls}">
-    <button data-expand="${type}"><div class="marquee-row"><iconify-icon class="notice-icon" icon="${icon}" aria-hidden="true"></iconify-icon><span class="notice-copy" data-short="${escapeHTML(shortText)}" data-long="${escapeHTML(longText)}">${escapeHTML(shortText)}</span></div></button>
-    <div class="expand" id="expand-${type}"><div class="expand-inner markdown">${markdownHTML(longText)}</div></div>
+  const className = type === 'warn' ? 'warn-bar' : type === 'guide' ? 'guide-bar' : 'info-bar';
+  const label = shortText || (type === 'guide' ? SITE_TEXTS.guideLabel : type === 'info' ? SITE_TEXTS.informationLabel : SITE_TEXTS.warningLabel);
+  const summary = summarizeNotice(longText);
+
+  return `<div class="dynamic-bar ${className}" data-notice-flip>
+    <button class="notice-button" data-expand="${escapeHTML(type)}" type="button" aria-expanded="false">
+      <span class="notice-main">
+        <span class="notice-icon" aria-hidden="true">${icon(noticeIcon(type))}</span>
+        <span class="notice-stack" aria-live="polite">
+          <span class="notice-line notice-label">${escapeHTML(label)}</span>
+          <span class="notice-line notice-summary">${escapeHTML(summary)}</span>
+        </span>
+      </span>
+      <span class="notice-chevron" aria-hidden="true">+</span>
+    </button>
+    <div class="expand" id="expand-${escapeHTML(type)}"><div class="expand-inner markdown">${markdownHTML(longText)}</div></div>
   </div>`;
 }
+
 function renderLoading() {
-  app.innerHTML = `<div class="loading-screen" role="status" aria-live="polite">
-    <iconify-icon icon="svg-spinners:90-ring-with-bg" aria-hidden="true"></iconify-icon>
-    <span>Carregando</span>
-  </div>`;
+  app.innerHTML = `<div class="loading-screen" role="status" aria-live="polite"><span class="loading-mark" aria-hidden="true">${icon('content')}</span><span>${SITE_TEXTS.loading}</span></div>`;
 }
-async function renderDetail(slug) {
-  const meta = state.items.find(i=>i.slug===slug);
-  if (!meta) { renderError('404'); return; }
-  renderLoading();
-  let item;
-  try {
-    const res = await fetch(`data/items/${encodeURIComponent(meta.file)}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('item');
-    item = { ...meta, ...await res.json() };
-  } catch {
-    renderError('500');
-    return;
+
+let searchFrame = 0;
+
+function scheduleHomeRender() {
+  cancelAnimationFrame(searchFrame);
+  searchFrame = requestAnimationFrame(() => renderHome());
+}
+
+function filteredItems() {
+  let items = state.items.slice();
+
+  if (state.category !== 'TODOS') {
+    const selected = normalizeCategory(state.category).toLowerCase();
+    items = items.filter(item => normalizeCategory(item.Category).toLowerCase() === selected);
   }
-  const hasRemoved = Boolean(item.removed !== undefined || item.removedtxt);
-  const hasWarn = Boolean(item.warn);
-  const hasInfo = Boolean(item.info || item.infotxt);
-  const hasGuide = Boolean(item.guiatxt);
-  const hasBottomNotices = hasWarn || hasInfo || hasGuide;
-  const imageArray = Array.isArray(item.Image) ? item.Image : (item.Image ? [item.Image] : []);
-  const buttonLinks = Array.isArray(item.ButtonLink) ? item.ButtonLink : (item.ButtonLink ? [item.ButtonLink] : []);
-  const platformMarkup = platformBadges(item.Platforms);
-  const detailsMeta = item.Category || platformMarkup ? `<div class="detail-meta">${item.Category ? `<span class="detail-category">${escapeHTML(item.Category)}</span>` : ''}${platformMarkup ? `<div class="detail-platforms">${platformMarkup}</div>` : ''}</div>` : '';
-  let html = `<div class="detail-wrap">
-    <a class="back" href="#/"><iconify-icon icon="solar:arrow-left-linear" aria-hidden="true"></iconify-icon> VOLTAR AO CATÁLOGO</a>
-    ${hasRemoved ? `<div class="detail-removed">${marqueeBar('removed', item.removed || 'ESTE CONTEÚDO POSSUI UMA OBSERVAÇÃO', item.removedtxt || '')}</div>` : ''}
-    <article class="detail">
-      <header class="detail-head">
-        ${detailsMeta}
-        <h1 class="detail-title">${escapeHTML(item.Title)}</h1>
-        <div class="detail-desc markdown">${markdownHTML(item.Description)}</div>
-        ${buttonLinks.length ? `<div class="actions">
-          ${buttonLinks.map((x,idx)=>`<a class="side-action" target="_blank" rel="noopener" href="${escapeHTML(x)}"><iconify-icon icon="solar:download-minimalistic-linear" aria-hidden="true"></iconify-icon><span>${escapeHTML(Array.isArray(item.ButtonLabel)?item.ButtonLabel[idx]:(item.ButtonLabel||'ABRIR LINK'))}</span></a>`).join('')}
-        </div>` : ''}
-      </header>
-      <div class="detail-body">
-        ${(item.text || item.content || item.notes) ? `<div class="section-block markdown">${markdownHTML(item.text || item.content || item.notes)}</div>` : ''}
-        ${imageArray.length ? `<div class="section-block"><h3><iconify-icon icon="solar:gallery-linear" aria-hidden="true"></iconify-icon> Imagens</h3><div class="images">${imageArray.map(src=>`<img loading="lazy" src="${escapeHTML(src)}" alt="Imagem de ${escapeHTML(item.Title)}">`).join('')}</div></div>` : ''}
-        ${hasBottomNotices ? '<div class="line-sep" role="separator"></div>' : ''}
-        ${hasWarn ? detailBarWithFlip('warn', 'Este conteúdo possui um aviso.', item.warn) : ''}
-        ${hasInfo ? detailBarWithFlip('info', item.info || 'INFORMAÇÃO', item.infotxt || item.info) : ''}
-        ${hasGuide ? detailBarWithFlip('guia', item.guia || 'GUIA DE USO', item.guiatxt) : ''}
-      </div>
-    </article>
-  </div>`;
-  app.innerHTML = html;
-  wireBars();
+
+  if (state.query.trim()) {
+    return items
+      .map(item => ({ item, score: fuzzyScore(state.query, item) }))
+      .filter(result => result.score >= 0.48)
+      .sort((a, b) => b.score - a.score)
+      .map(result => result.item);
+  }
+
+  return items.sort((a, b) => (a.Title || '').localeCompare(b.Title || '', 'pt-BR'));
 }
-function wireBars() {
-  detailTimers.forEach(timer => clearInterval(timer));
-  detailTimers.clear();
-  document.querySelectorAll('[data-expand]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const key = btn.dataset.expand;
-      const target = document.querySelector(`#expand-${key}`);
-      if (!target) return;
-      target.classList.toggle('open');
-      const bar = target.closest('.dynamic-bar');
-      if (bar) bar.classList.toggle('is-open', target.classList.contains('open'));
+
+function renderHome() {
+  const items = filteredItems();
+  const categoryList = categories();
+
+  app.innerHTML = `<section class="hero">
+    <div class="hero-copy">
+      <h1>${escapeHTML(SITE_TEXTS.heroTitle)} <em>${escapeHTML(SITE_TEXTS.heroAccent)}</em></h1>
+      <div class="hero-kicker">${icon('heart')} ${escapeHTML(SITE_TEXTS.heroKicker)}</div>
+      <p>${escapeHTML(SITE_TEXTS.heroDescription)}</p>
+    </div>
+  </section>
+  <section class="search-shell">
+    <div class="searchbox">
+      <div class="search-field">${icon('search')}<input id="search" autocomplete="off" spellcheck="false" placeholder="${escapeHTML(SITE_TEXTS.searchPlaceholder)}" value="${escapeHTML(state.query)}" aria-label="Pesquisar"></div>
+    </div>
+  </section>
+  <section class="catalog-tools" id="catalog">
+    <div class="filters">
+      ${categoryList.map(category => `<button class="filter ${category === state.category ? 'active' : ''}" data-category="${escapeHTML(category)}" type="button">${icon('tag')}<span>${escapeHTML(category)}</span></button>`).join('')}
+    </div>
+    <div class="result-meta">${items.length} resultado${items.length === 1 ? '' : 's'}${state.query ? ` para “${escapeHTML(state.query)}”` : ''}</div>
+  </section>
+  <section class="grid">${items.length ? items.map((item, index) => cardHTML(item, index)).join('') : `<div class="empty">${escapeHTML(SITE_TEXTS.noResults)}</div>`}</section>`;
+
+  const field = document.querySelector('#search');
+  field?.addEventListener('input', event => {
+    state.query = event.target.value;
+    scheduleHomeRender();
+  });
+
+  document.querySelectorAll('[data-category]').forEach(button => {
+    button.addEventListener('click', () => {
+      state.category = button.dataset.category;
+      renderHome();
     });
   });
+
+  if (document.activeElement !== field && state.query) field?.focus();
+  if (state.query && field) field.setSelectionRange(state.query.length, state.query.length);
+}
+
+function renderError(code = '500') {
+  app.innerHTML = `<section class="error-screen" role="alert">
+    <div class="error-icon" aria-hidden="true">${icon('open')}</div>
+    <div class="error-code">${escapeHTML(code)}</div>
+    <h1>${escapeHTML(SITE_TEXTS.errorTitle)}</h1>
+    <p>${escapeHTML(SITE_TEXTS.errorDescription)}</p>
+    <a class="error-back" href="#/">${icon('back')} ${escapeHTML(SITE_TEXTS.backToCatalog)}</a>
+  </section>`;
+}
+
+let detailRouteToken = 0;
+
+async function renderDetail(slug) {
+  const currentToken = ++detailRouteToken;
+  const meta = state.items.find(item => item.slug === slug);
+
+  if (!meta) {
+    renderError('404');
+    return;
+  }
+
+  renderLoading();
+
+  try {
+    const response = await fetch(`data/items/${encodeURIComponent(meta.file)}`, { cache: 'default' });
+    if (!response.ok) throw new Error('item');
+
+    const item = { ...meta, ...await response.json() };
+    if (currentToken !== detailRouteToken) return;
+
+    const removed = Boolean(item.removed !== undefined || item.removedtxt);
+    const warning = Boolean(item.warn);
+    const information = Boolean(item.info || item.infotxt);
+    const guide = Boolean(item.guiatxt);
+    const hasNotices = warning || information || guide;
+    const images = Array.isArray(item.Image) ? item.Image : item.Image ? [item.Image] : [];
+    const links = Array.isArray(item.ButtonLink) ? item.ButtonLink : item.ButtonLink ? [item.ButtonLink] : [];
+    const labels = Array.isArray(item.ButtonLabel) ? item.ButtonLabel : item.ButtonLabel ? [item.ButtonLabel] : [];
+    const platforms = platformBadges(item.Platforms);
+    const category = normalizeCategory(item.Category);
+    const content = item.text || item.content || item.notes || '';
+
+    const buttons = links.map((link, index) => `
+      <a class="side-action" target="_blank" rel="noopener noreferrer" href="${escapeHTML(link)}">
+        ${icon('download')}<span>${escapeHTML(labels[index] || labels[0] || SITE_TEXTS.linkLabel)}</span>
+      </a>`).join('');
+
+    app.innerHTML = `<div class="detail-wrap">
+      <a class="back" href="#/">${icon('back')} ${escapeHTML(SITE_TEXTS.backToCatalog)}</a>
+      ${removed ? `<div class="detail-removed">${marqueeBar('removed', item.removed || SITE_TEXTS.removedLabel, item.removedtxt || '')}</div>` : ''}
+      <article class="detail">
+        <header class="detail-head">
+          ${category || platforms ? `<div class="detail-meta">${category ? `<span class="detail-category">${icon('tag')} ${escapeHTML(category)}</span>` : ''}${platforms ? `<div class="detail-platforms">${platforms}</div>` : ''}</div>` : ''}
+          <h1 class="detail-title">${escapeHTML(item.Title)}</h1>
+          <div class="detail-desc markdown">${markdownHTML(item.Description)}</div>
+          ${buttons ? `<div class="actions">${buttons}</div>` : ''}
+        </header>
+        <div class="detail-body">
+          ${content ? `<div class="section-block markdown"><h3>${icon('content')} ${escapeHTML(SITE_TEXTS.contentTitle)}</h3>${markdownHTML(content)}</div>` : ''}
+          ${images.length ? `<div class="section-block"><h3>${icon('gallery')} ${escapeHTML(SITE_TEXTS.imagesTitle)}</h3><div class="images">${images.map(src => `<img loading="lazy" decoding="async" src="${escapeHTML(src)}" alt="Imagem de ${escapeHTML(item.Title)}">`).join('')}</div></div>` : ''}
+          ${hasNotices ? '<div class="line-sep" role="separator"></div>' : ''}
+          ${warning ? detailBarWithFlip('warn', item.warnTitle || SITE_TEXTS.warningLabel, item.warn) : ''}
+          ${information ? detailBarWithFlip('info', item.info || SITE_TEXTS.informationLabel, item.infotxt || item.info) : ''}
+          ${guide ? detailBarWithFlip('guide', item.guia || SITE_TEXTS.guideLabel, item.guiatxt) : ''}
+        </div>
+      </article>
+    </div>`;
+
+    wireBars();
+  } catch {
+    if (currentToken === detailRouteToken) renderError('500');
+  }
+}
+
+function wireBars() {
+  detailTimers.forEach(timer => {
+    clearTimeout(timer);
+    clearInterval(timer);
+  });
+  detailTimers.clear();
+
+  document.querySelectorAll('[data-expand]').forEach(button => {
+    button.addEventListener('click', () => {
+      const target = document.querySelector(`#expand-${button.dataset.expand}`);
+      if (!target) return;
+
+      const bar = target.closest('.dynamic-bar');
+      const isOpen = !target.classList.contains('open');
+      target.classList.toggle('open', isOpen);
+      bar?.classList.toggle('is-open', isOpen);
+      button.setAttribute('aria-expanded', String(isOpen));
+    });
+  });
+
   document.querySelectorAll('[data-marquee]').forEach(track => {
     const clip = track.closest('.marquee-clip');
     const group = track.querySelector('.marquee-group');
     if (!clip || !group) return;
+
     requestAnimationFrame(() => {
-      while (group.scrollWidth < clip.clientWidth + 100) {
+      if (track.dataset.prepared) return;
+      track.dataset.prepared = '1';
+
+      while (group.scrollWidth < clip.clientWidth + 100 && group.firstElementChild) {
         group.insertAdjacentHTML('beforeend', group.firstElementChild.outerHTML);
       }
-      const duplicate = group.cloneNode(true);
-      duplicate.setAttribute('aria-hidden', 'true');
-      track.append(duplicate);
-      track.style.setProperty('--marquee-duration', `${Math.max(8, group.scrollWidth / 42)}s`);
+
+      track.append(group.cloneNode(true));
+      const travelWidth = Math.max(group.scrollWidth, clip.clientWidth);
+      track.style.setProperty('--marquee-duration', `${Math.max(10, travelWidth / 34)}s`);
     });
   });
-  document.querySelectorAll('.notice-copy').forEach(copy => {
-    let showingLong = false;
-    const fadeDuration = 250;
-    const timer = setInterval(() => {
-      const bar = copy.closest('.dynamic-bar');
-      if (!bar || bar.classList.contains('is-open')) return;
-      copy.classList.add('notice-exit');
-      setTimeout(() => {
-        if (bar.classList.contains('is-open')) {
-          copy.classList.remove('notice-exit');
-          return;
-        }
-        showingLong = !showingLong;
-        copy.textContent = showingLong ? copy.dataset.long : copy.dataset.short;
-        copy.classList.add('notice-prep', 'notice-enter');
-        copy.classList.remove('notice-exit');
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            copy.classList.remove('notice-prep');
-            requestAnimationFrame(() => copy.classList.remove('notice-enter'));
-          });
-        });
-      }, fadeDuration);
-    }, 5600);
-    detailTimers.add(timer);
+
+  document.querySelectorAll('[data-notice-flip]').forEach(bar => {
+    const showSummary = () => {
+      if (bar.classList.contains('is-open')) return;
+      bar.classList.toggle('show-summary');
+    };
+
+    const first = setTimeout(showSummary, 2400);
+    const cycle = setInterval(showSummary, 6200);
+    detailTimers.add(first);
+    detailTimers.add(cycle);
   });
 }
+
 async function route() {
   const hash = location.hash || '#/';
   if (hash === '#/' || hash === '#') return renderHome();
+
   const match = hash.match(/^#\/item\/(.+)$/);
-  if (match) return renderDetail(decodeURIComponent(match[1]));
-  return renderHome();
+  return match ? renderDetail(decodeURIComponent(match[1])) : renderHome();
 }
+
 window.addEventListener('hashchange', route);
-window.addEventListener('keydown', e=> {
-  if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k') {
-    e.preventDefault();
+window.addEventListener('keydown', event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
     document.querySelector('#search')?.focus();
   }
 });
-(async()=>{
+
+(async () => {
   try {
     renderLoading();
-    setupPlayer();
-    await loadCatalog();
+    loadCatalog();
     await route();
   } catch {
     renderError('500');
