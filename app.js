@@ -1,5 +1,5 @@
 const SITE_TEXTS = Object.freeze({
-  heroKicker: 'Hospedado com amor por GitHub',
+  heroKicker: 'Hospedado com amor pelo GitHub',
   heroTitle: 'Bufus',
   heroAccent: 'Essentials',
   heroDescription: 'Uma seleção de recursos essenciais reunidos em um só lugar.',
@@ -8,14 +8,14 @@ const SITE_TEXTS = Object.freeze({
   noResults: 'Nenhum resultado encontrado.',
   loading: 'Carregando',
   errorTitle: 'OCORREU UM ERRO',
-  errorDescription: 'Infelizmente, o site possui algum problema. Isso será resolvido em breve.',
+  errorDescription: 'Infelizmente, o site possui algum problema.',
   backToCatalog: 'VOLTAR AO CATÁLOGO',
   contentTitle: 'Conteúdo',
   imagesTitle: 'Imagens',
   guideLabel: 'GUIA DE USO',
   informationLabel: 'INFORMAÇÃO',
   warningLabel: 'Este conteúdo possui um aviso.',
-  removedLabel: 'ESTE CONTEÚDO POSSUI UMA OBSERVAÇÃO',
+  removedLabel: 'CONTEÚDO REMOVIDO',
   linkLabel: 'ABRIR LINK',
 });
 
