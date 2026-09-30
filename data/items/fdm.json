@@ -4,6 +4,9 @@
   "Description": "Um baixador de qualquer coisa que você precisar.",
   "Category": "Downloaders",
   "text": "Como já diz na descrição é um baixador de qualquer coisa que você quiser (isso se tiver suporte né), você pode integrar ele no seu navegador e seus downloads serão bem melhores, ao invés de usar o próprio navegador e ter que deixar ele aberto 24/7 até seu download terminar, não tem muito detalhe mais, você abre, baixa algo e pronto, faz o que quiser.",
+  "warn": "iiSU não é um emulador, então não baixe achando que ele vai rodar seus jogos, ele é apenas um lançador para outros apps só que com um visual superior a todos os outros.",
+  "guia": "ONDE BAIXAR JOGOS?",
+  "guiatxt": "Bom, você pode baixar nesses sites aqui:\n- [Minerva Archive](https://minerva-archive.org/browse/RetroAchievements/RA%20-%20Sony%20Playstation%202/)\n- [BlueRoms](https://www.blueroms.ws/ps2)\n- [CDRomance](https://cdromance.org/ps2-iso/)\n- [OldGames](https://oldgamesdownload.com/platform/playstation-2/)\n- [ROMsPortuguês](https://romsportugues.com/category/playstation-2-ps2/)\n- [ConsoleROMs](https://www.consoleroms.com/roms/ps2)\nAlguns deles é recomendado que você tenha [qBitorrent](https://www.qbittorrent.org/download) ou [Free Download Manager](https://komashifx.github.io/essentials/#/item/fdm)",
   "Platforms": [
     "pc",
     "android",
@@ -13,5 +16,5 @@
     "FDM"
   ],
   "ButtonLink": "https://www.freedownloadmanager.org/pt/download.htm#windows",
-  "ButtonLabel": "Baixar FDM"
+  "ButtonLabel": "Baixar Free Download Manager"
 }

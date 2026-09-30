@@ -1,0 +1,16 @@
+{
+  "slug": "metrolist",
+  "Title": "Metrolist",
+  "Description": "Um cliente do YT Music sem anúncios e os krl",
+  "Category": "Música",
+  "text": "A descrição já diz tudo, ele é insano de bom, sem anúncios e com opção para baixar as músicas, não só isso como tem como vincular com o Discord e também com o LastFM",
+  "warn": "Aplicação segura, código aberto e com autenticação ao Google sem risco de banimento",
+  "Platforms": [
+    "android"
+  ],
+  "aliases": [
+    "metro"
+  ],
+  "ButtonLink": "https://github.com/MetrolistGroup/Metrolist/releases",
+  "ButtonLabel": "Baixar Metrolist"
+}

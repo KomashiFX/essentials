@@ -1,0 +1,20 @@
+{
+  "slug": "pearkdesktop",
+  "Title": "Pear Desktop",
+  "Description": "Um cliente de uma plataforma de música bem conhecida.",
+  "Category": "Música",
+  "text": "Resumindo, isso aqui é um \"YouTube Music\" sem anúncios, e existe alguns plugins pra você utilizar que podem lhe interessar, não são obrigatórios, mas vai de sua escolha usar ou não.\n\nCaso você queira sair da lixeira do Spotify, esse app é a melhor opção, ele tem login disponível na sua conta Google (seguro e autenticado no Google).",
+  "info": "Como usar o Downloader",
+  "infotxt": "Siga antes o Guia abaixo e logo em seguida veja este tutorial, mas após fazer o que você fez abaixo, vá em plugins novamente e ligue o Downloader do Pear, depois disso quando reiniciar o app, escolha uma música clique nas três bolinhas ao lado do botão de deslike e selecione a primeira opção de \"Baixar\", nunca selecione o \"Baixar\" com o \"P\" ao lado, esse é do YouTube mesmo.",
+  "guia": "AdBlock",
+  "guiatxt": "Ao abrir o aplicativo você vai ver no canto superior várias opções, uma delas vai ser o \"plugins\", aperte nele e logo em seguida aperte em **Do Not Track** e reinicie o aplicativo, ai o adblock vai estar ativo e pronto, basta usar o app.",
+  "Platforms": [
+    "pc"
+  ],
+  "aliases": [
+    "pear",
+    "youtube music"
+  ],
+  "ButtonLink": "https://github.com/pear-devs/pear-desktop/releases/",
+  "ButtonLabel": "Baixar Pear Desktop"
+}

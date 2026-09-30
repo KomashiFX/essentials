@@ -89,6 +89,22 @@ window.ESSENTIALS_ITEMS = [
     "Banner": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery9-81e2eb06ffaf1568.png"
   },
   {
+    "file": "metrolist.json",
+    "slug": "metrolist",
+    "Title": "Metrolist",
+    "aliases": [
+      "metro"
+    ],
+    "Description": "Um cliente do YT Music sem anúncios e os krl",
+    "Category": "Música",
+    "Platforms": [
+      "android"
+    ],
+    "Image": null,
+    "Logo": "https://metrolist.meowery.eu/logo.svg",
+    "Banner": "https://cdn.neowin.com/news/images/uploaded/2025/07/1751648851_metrolist.webp"
+  },
+  {
     "file": "musicpresence.json",
     "slug": "musicpresence",
     "Title": "Music Presence",
@@ -151,6 +167,23 @@ window.ESSENTIALS_ITEMS = [
     "Image": null,
     "Logo": "https://www.techspot.com/images2/downloads/topdownload/2021/01/2021-01-11-ts3_thumbs-e5a.png",
     "Banner": "https://www.irrompibles.net/irrwp/wp-content/uploads/2022/10/ps2-games-e1666713341454.png"
+  },
+  {
+    "file": "pearkdesktop.json",
+    "slug": "pearkdesktop",
+    "Title": "Pear Desktop",
+    "aliases": [
+      "pear",
+      "youtube music"
+    ],
+    "Description": "Um cliente de uma plataforma de música bem conhecida.",
+    "Category": "Música",
+    "Platforms": [
+      "pc"
+    ],
+    "Image": null,
+    "Logo": "https://peardesktop.com/pear-desktop-icon-144.webp",
+    "Banner": "https://peardesktop.com/pear-desktop-youtube-music-screenshot-1280.webp"
   },
   {
     "file": "sistemaoperacional.json",
