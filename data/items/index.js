@@ -12,8 +12,7 @@ window.ESSENTIALS_ITEMS = [
       "linux"
     ],
     "Image": null,
-    "Logo": "https://eden-emu.dev/assets/logos/named_logo.png",
-    "Banner": "https://cdn.tugatech.com.pt/imagens/artigos/2026/01/27/tugatech-5097-44938.jpg"
+    "Logo": "https://eden-emu.dev/assets/logos/named_logo.png"
   },
   {
     "file": "fdm.json",
@@ -30,8 +29,7 @@ window.ESSENTIALS_ITEMS = [
       "linux"
     ],
     "Image": null,
-    "Logo": "https://c.clc2l.com/c/thumbnail96/t/f/r/free-download-manager-sYZNqL.png",
-    "Banner": "https://cdn.neowin.com/news/images/uploaded/2025/06/1750452476_free_download_manager.webp"
+    "Logo": "https://c.clc2l.com/c/thumbnail96/t/f/r/free-download-manager-sYZNqL.png"
   },
   {
     "file": "Firefox.json",
@@ -51,8 +49,7 @@ window.ESSENTIALS_ITEMS = [
       "web"
     ],
     "Image": null,
-    "Logo": "https://cdn.simpleicons.org/firefox/FF7139",
-    "Banner": "https://cdn.wallpapersafari.com/33/68/Fm2qBD.jpg"
+    "Logo": "https://cdn.simpleicons.org/firefox/FF7139"
   },
   {
     "file": "hayase.json",
@@ -69,8 +66,7 @@ window.ESSENTIALS_ITEMS = [
       "pc"
     ],
     "Image": null,
-    "Logo": "M.00000117 61.5156237V4.6302097l66.145831 37.041664v19.84375l-47.624995-26.72291v16.40416zm66.145831-30.42707-23.547916-13.229174 23.547916-13.22917Z",
-    "Banner": "https://hayase.watch/app.webp"
+    "Logo": "M.00000117 61.5156237V4.6302097l66.145831 37.041664v19.84375l-47.624995-26.72291v16.40416zm66.145831-30.42707-23.547916-13.229174 23.547916-13.22917Z"
   },
   {
     "file": "iisu.json",
@@ -85,8 +81,7 @@ window.ESSENTIALS_ITEMS = [
       "android"
     ],
     "Image": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery6-1d6c0b49d672579f.png",
-    "Logo": "https://vectorseek.com/wp-content/uploads/2026/01/iiSU-Logo-PNG-SVG-Vector-01.png",
-    "Banner": "https://cdn.iisu.network/cdn-cgi/image/width=2200,height=2200,fit=scale-down,quality=85,format=auto/cms/media/c-gallery9-81e2eb06ffaf1568.png"
+    "Logo": "https://vectorseek.com/wp-content/uploads/2026/01/iiSU-Logo-PNG-SVG-Vector-01.png"
   },
   {
     "file": "metrolist.json",
@@ -101,8 +96,7 @@ window.ESSENTIALS_ITEMS = [
       "android"
     ],
     "Image": null,
-    "Logo": "https://metrolist.meowery.eu/logo.svg",
-    "Banner": "https://cdn.neowin.com/news/images/uploaded/2025/07/1751648851_metrolist.webp"
+    "Logo": "https://metrolist.meowery.eu/logo.svg"
   },
   {
     "file": "musicpresence.json",
@@ -116,8 +110,7 @@ window.ESSENTIALS_ITEMS = [
       "linux"
     ],
     "Image": null,
-    "Logo": "https://cdn.discordapp.com/icons/1224509771068211292/deafde046a6b42d123f44b9b0bb04c49.png?size=256",
-    "Banner": "https://cdn.discordapp.com/discovery-splashes/1224509771068211292/7d4e56334b4aa4736fbdfd4e794addb7.jpg?size=2048&format=auto"
+    "Logo": "https://cdn.discordapp.com/icons/1224509771068211292/deafde046a6b42d123f44b9b0bb04c49.png?size=256"
   },
   {
     "file": "nora.json",
@@ -132,9 +125,8 @@ window.ESSENTIALS_ITEMS = [
       "pc",
       "linux"
     ],
-    "Image": "https://raw.githubusercontent.com/Sandakan/Nora/v3.1.0-stable/resources/other/nora_logo_banner.webp",
-    "Logo": "https://noramusic.netlify.app/assets/nora-logo-CO31figH.webp",
-    "Banner": "https://raw.githubusercontent.com/Sandakan/Nora/refs/tags/v3.1.0-stable/resources/other/artwork%200.webp"
+    "Image": null,
+    "Logo": "https://noramusic.netlify.app/assets/nora-logo-CO31figH.webp"
   },
   {
     "file": "opennow.json",
@@ -151,8 +143,7 @@ window.ESSENTIALS_ITEMS = [
       "linux"
     ],
     "Image": null,
-    "Logo": "https://raw.githubusercontent.com/OpenCloudGaming/OpenNOW/refs/heads/main/opennow-qt/res/brand/opennow-mark.png",
-    "Banner": "https://raw.githubusercontent.com/OpenCloudGaming/OpenNOW/refs/heads/main/docs/assets/readme/desktop-home.webp"
+    "Logo": "https://raw.githubusercontent.com/OpenCloudGaming/OpenNOW/refs/heads/main/opennow-qt/res/brand/opennow-mark.png"
   },
   {
     "file": "pcsx2.json",
@@ -165,8 +156,7 @@ window.ESSENTIALS_ITEMS = [
       "pc"
     ],
     "Image": null,
-    "Logo": "https://www.techspot.com/images2/downloads/topdownload/2021/01/2021-01-11-ts3_thumbs-e5a.png",
-    "Banner": "https://www.irrompibles.net/irrwp/wp-content/uploads/2022/10/ps2-games-e1666713341454.png"
+    "Logo": "https://www.techspot.com/images2/downloads/topdownload/2021/01/2021-01-11-ts3_thumbs-e5a.png"
   },
   {
     "file": "pearkdesktop.json",
@@ -182,8 +172,7 @@ window.ESSENTIALS_ITEMS = [
       "pc"
     ],
     "Image": null,
-    "Logo": "https://peardesktop.com/pear-desktop-icon-144.webp",
-    "Banner": "https://peardesktop.com/pear-desktop-youtube-music-screenshot-1280.webp"
+    "Logo": "https://peardesktop.com/pear-desktop-icon-144.webp"
   },
   {
     "file": "sistemaoperacional.json",
@@ -200,8 +189,7 @@ window.ESSENTIALS_ITEMS = [
       "pc"
     ],
     "Image": null,
-    "Logo": "https://logomaker.designfreelogoonline.com/media/productdesigner/logo/resized/1281_computer-03.png",
-    "Banner": "https://wallpapercave.com/wp/wp5515897.jpg"
+    "Logo": "https://logomaker.designfreelogoonline.com/media/productdesigner/logo/resized/1281_computer-03.png"
   },
   {
     "file": "visualc.json",
@@ -216,8 +204,7 @@ window.ESSENTIALS_ITEMS = [
       "pc"
     ],
     "Image": null,
-    "Logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Visual_Studio_Icon_2022.svg/1280px-Visual_Studio_Icon_2022.svg.png",
-    "Banner": "https://wallpapercave.com/wp/wp2633259.jpg"
+    "Logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Visual_Studio_Icon_2022.svg/1280px-Visual_Studio_Icon_2022.svg.png"
   },
   {
     "file": "ytdlnis.json",
@@ -230,7 +217,6 @@ window.ESSENTIALS_ITEMS = [
       "android"
     ],
     "Image": null,
-    "Logo": "https://ytdlnis.org/logo.png",
-    "Banner": "https://slidechef.net/wp-content/uploads/2024/09/youtube-background.jpg"
+    "Logo": "https://ytdlnis.org/logo.png"
   }
 ];

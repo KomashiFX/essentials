@@ -3,6 +3,7 @@
   "Title": "Nora",
   "Description": "Player de música offline com design moderno.",
   "Category": "Música",
+  "Image": null,
   "text": "Nora é um player de música insano de bonito, então tipo assim, se você não quer essa coisa feia do windows esse app é altamente recomendado, e ele não só toca música, ele tem suporte a metadata online, assim você consegue por fotos, arrumar os nomes dos arquivos e etc de seus arquivos ao invés de ter somente aquele `musica-ytdownload.mp3` sem foto e foto feioso, e não só isso como ele também tem suporte a LastFM e integração com Discord RPC.",
   "info": "Informações da página de Download",
   "infotxt": "Pode ser um pouco confuso mas quando estiver navegando entre as releases baixe a versão que desejar (**recomendado release**) e depois clique em **> Assets** para abrir toda a pagina e ver todos os arquivos para baixar o Nora.",

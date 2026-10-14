@@ -2,7 +2,6 @@ const SITE_TEXTS = Object.freeze({
   heroKicker: 'Hospedado com amor pelo GitHub',
   heroTitle: 'Bufus',
   heroAccent: 'Essentials',
-  heroDescription: 'Uma seleção de recursos essenciais reunidos em um só lugar.',
   searchPlaceholder: 'Pesquisar no catálogo',
   openAction: 'ABRIR',
   noResults: 'Nenhum resultado encontrado.',
@@ -28,6 +27,97 @@ const state = {
 const app = document.querySelector('#app');
 
 const detailTimers = new Set();
+const APPEARANCE_KEY = 'essentials-appearance';
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let themeWarningTimer;
+let themeWarningHideTimer;
+let themeWarningFrame;
+const appearance = {
+  theme: 'dark',
+  animations: !reducedMotion.matches,
+  glass: true
+};
+
+function loadAppearance() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(APPEARANCE_KEY) || '{}');
+    if (saved.theme === 'dark' || saved.theme === 'light') appearance.theme = saved.theme;
+    if (typeof saved.animations === 'boolean') appearance.animations = saved.animations;
+    if (typeof saved.glass === 'boolean') appearance.glass = saved.glass;
+    if ('background' in saved) {
+      delete saved.background;
+      saveAppearance();
+    }
+  } catch (error) {
+    console.warn('[Essentials] Preferências de aparência indisponíveis:', error);
+  }
+}
+
+function saveAppearance() {
+  try {
+    localStorage.setItem(APPEARANCE_KEY, JSON.stringify({
+      theme: appearance.theme,
+      animations: appearance.animations,
+      glass: appearance.glass
+    }));
+  } catch (error) {
+    console.warn('[Essentials] Não foi possível salvar as preferências de aparência:', error);
+  }
+}
+
+function applyAppearance() {
+  document.documentElement.dataset.theme = appearance.theme;
+  document.documentElement.classList.toggle('theme-light', appearance.theme === 'light');
+  document.documentElement.classList.toggle('motion-off', !appearance.animations || reducedMotion.matches);
+  document.documentElement.classList.toggle('glass-off', !appearance.glass);
+  document.querySelector('meta[name="theme-color"]').content = appearance.theme === 'light' ? '#f4f2ec' : '#000000';
+  document.querySelector('#theme-icon').setAttribute('icon', appearance.theme === 'light' ? 'solar:sun-2-linear' : 'solar:moon-stars-linear');
+  document.querySelector('#theme-toggle').setAttribute('aria-label', `Mudar para tema ${appearance.theme === 'light' ? 'escuro' : 'claro'}`);
+  document.querySelector('#animations-choice').checked = appearance.animations;
+  document.querySelector('#glass-choice').checked = appearance.glass;
+  if (!appearance.glass) document.querySelectorAll('.cursor-glow.pointer-lit').forEach(element => element.classList.remove('pointer-lit'));
+  if (!appearance.animations || reducedMotion.matches) {
+    detailTimers.forEach(timer => {
+      clearTimeout(timer);
+      clearInterval(timer);
+    });
+    detailTimers.clear();
+    document.querySelectorAll('[data-marquee]').forEach(track => {
+      track.style.animation = 'none';
+    });
+  }
+
+}
+
+function hideThemeWarning() {
+  const warning = document.querySelector('#light-theme-warning');
+  clearTimeout(themeWarningTimer);
+  clearTimeout(themeWarningHideTimer);
+  cancelAnimationFrame(themeWarningFrame);
+  themeWarningFrame = undefined;
+  warning.classList.remove('is-visible');
+  themeWarningHideTimer = setTimeout(() => {
+    warning.hidden = true;
+  }, appearance.animations && !reducedMotion.matches ? 220 : 0);
+}
+
+function showThemeWarning() {
+  const warning = document.querySelector('#light-theme-warning');
+  clearTimeout(themeWarningTimer);
+  clearTimeout(themeWarningHideTimer);
+  cancelAnimationFrame(themeWarningFrame);
+  warning.hidden = false;
+  if (appearance.animations && !reducedMotion.matches) {
+    themeWarningFrame = requestAnimationFrame(() => {
+      warning.classList.add('is-visible');
+      themeWarningFrame = undefined;
+    });
+  } else {
+    warning.classList.add('is-visible');
+  }
+  const fadeDuration = appearance.animations && !reducedMotion.matches ? 220 : 0;
+  themeWarningTimer = setTimeout(hideThemeWarning, 10000 - fadeDuration);
+}
 
 const icons = {
   heart: 'solar:heart-linear',
@@ -131,6 +221,14 @@ function escapeHTML(value) {
   }[character]));
 }
 
+function normalize(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 function logoMarkup(source) {
   const value = String(source ?? '').trim();
   if (!value) return '';
@@ -146,114 +244,28 @@ function logoMarkup(source) {
   return `<img class="card-logo" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}" alt="" loading="lazy" decoding="async">`;
 }
 
-function markdownInline(value, { allowLinks = true } = {}) {
-  const tokens = [];
-  const stash = html => {
-    const key = `\uE000K${tokens.length}\uE001`;
-    tokens.push(html);
-    return key;
-  };
-
-  let text = String(value ?? '');
-
-  // Protect inline code before applying emphasis/link rules.
-  text = text.replace(/`([^`\n]+)`/g, (_, code) => stash(`<code>${escapeHTML(code)}</code>`));
-  text = escapeHTML(text);
-
-  // Markdown images and links are converted before emphasis, then restored last.
-  text = text.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi, (_, alt, url) => (
-    stash(`<img src="${url}" alt="${escapeHTML(alt)}" loading="lazy" decoding="async">`)
-  ));
-
-  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_, label, url) => {
-    if (!allowLinks) return label;
-    return stash(`<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+function markdownHTML(value, { allowLinks = true } = {}) {
+  if (!window.marked?.parse || !window.DOMPurify?.sanitize) {
+    throw new Error('Não foi possível carregar o renderizador seguro de Markdown.');
+  }
+  const safeHTML = DOMPurify.sanitize(marked.parse(String(value ?? ''), { gfm: true, breaks: true }), {
+    USE_PROFILES: { html: true }
   });
-
-  text = text
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/_([^_]+)_/g, '<em>$1</em>');
-
-  if (allowLinks) {
-    text = text.replace(/(^|[\s(])((?:https?:\/\/|www\.)[^\s<]+)/gi, (_, prefix, rawUrl) => {
-      const match = rawUrl.match(/^(.*?)([.,!?;:]+)?(?:\)+|\]+)?$/);
-      const cleanUrl = (match?.[1] || rawUrl).trim();
-      const trailing = rawUrl.slice(cleanUrl.length);
-      if (!cleanUrl) return prefix + rawUrl;
-
-      const href = /^www\./i.test(cleanUrl) ? `https://${cleanUrl}` : cleanUrl;
-      return `${prefix}${stash(`<a href="${href}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>`)}${trailing}`;
-    });
-  }
-
-  return text.replace(/\uE000K(\d+)\uE001/g, (_, index) => tokens[Number(index)] || '');
-}
-
-function markdownHTML(value, options = {}) {
-  const lines = String(value ?? '').replace(/\r/g, '').split('\n');
-  const output = [];
-  let listOpen = false;
-  let inCode = false;
-  let codeLines = [];
-
-  const closeList = () => {
-    if (!listOpen) return;
-    output.push('</ul>');
-    listOpen = false;
-  };
-
-  for (const line of lines) {
-    if (line.trim().startsWith('```')) {
-      if (inCode) {
-        output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
-        codeLines = [];
-      }
-      inCode = !inCode;
-      closeList();
-      continue;
+  const template = document.createElement('template');
+  template.innerHTML = safeHTML;
+  template.content.querySelectorAll('a[href]').forEach(link => {
+    if (!allowLinks) {
+      link.replaceWith(...link.childNodes);
+      return;
     }
-
-    if (inCode) {
-      codeLines.push(line);
-      continue;
-    }
-
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    const marker = line.match(/^\s*[-*]\s+(.+)$/);
-    const quote = line.match(/^\s*>\s?(.+)$/);
-
-    if (heading) {
-      closeList();
-      const level = heading[1].length;
-      output.push(`<h${level}>${markdownInline(heading[2], options)}</h${level}>`);
-      continue;
-    }
-
-    if (marker) {
-      if (!listOpen) {
-        output.push('<ul>');
-        listOpen = true;
-      }
-      output.push(`<li>${markdownInline(marker[1], options)}</li>`);
-      continue;
-    }
-
-    if (quote) {
-      closeList();
-      output.push(`<blockquote>${markdownInline(quote[1], options)}</blockquote>`);
-      continue;
-    }
-
-    closeList();
-    if (line.trim()) output.push(`<p>${markdownInline(line, options)}</p>`);
-  }
-
-  if (inCode) output.push(`<pre><code>${escapeHTML(codeLines.join('\n'))}</code></pre>`);
-  closeList();
-
-  return output.join('');
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  });
+  template.content.querySelectorAll('img').forEach(image => {
+    image.loading = 'lazy';
+    image.decoding = 'async';
+  });
+  return template.innerHTML;
 }
 
 function normalizeCategory(value) {
@@ -318,13 +330,11 @@ function cardDescriptionHTML(value) {
 }
 
 function cardHTML(item, index = 0) {
-  const banner = item.Banner || item.banner || (Array.isArray(item.Image) ? item.Image[0] : item.Image);
   const logo = item.Logo || item.logo;
   const platforms = platformBadges(item.Platforms);
   const category = normalizeCategory(item.Category);
 
-  return `<a class="card" style="--card-index:${index}" href="#/item/${encodeURIComponent(item.slug)}">
-    ${banner ? `<div class="card-media"><img class="card-banner" src="${escapeHTML(banner)}" alt="" aria-hidden="true" loading="lazy" decoding="async"></div>` : ''}
+  return `<a class="card cursor-glow" style="--card-index:${index}" href="#/item/${encodeURIComponent(item.slug)}">
     <div class="card-content">
       <div class="card-meta">
         ${category ? `<div class="card-category">${icon('tag')}<span>${escapeHTML(category)}</span></div>` : ''}
@@ -442,19 +452,7 @@ function renderHome() {
   const items = filteredItems();
   const categoryList = categories();
 
-  app.innerHTML = `<section class="hero">
-    <div class="hero-copy">
-      <h1>${escapeHTML(SITE_TEXTS.heroTitle)} <em>${escapeHTML(SITE_TEXTS.heroAccent)}</em></h1>
-      <div class="hero-kicker">${icon('heart')} ${escapeHTML(SITE_TEXTS.heroKicker)}</div>
-      <p>${escapeHTML(SITE_TEXTS.heroDescription)}</p>
-    </div>
-  </section>
-  <section class="search-shell">
-    <div class="searchbox">
-      <div class="search-field">${icon('search')}<input id="search" autocomplete="off" spellcheck="false" placeholder="${escapeHTML(SITE_TEXTS.searchPlaceholder)}" value="${escapeHTML(state.query)}" aria-label="Pesquisar"></div>
-    </div>
-  </section>
-  <section class="catalog-tools" id="catalog">
+  app.innerHTML = `<section class="catalog-tools" id="catalog">
     <div class="filters">
       ${categoryList.map(category => `<button class="filter ${category === state.category ? 'active' : ''}" data-category="${escapeHTML(category)}" type="button">${icon('tag')}<span>${escapeHTML(category)}</span></button>`).join('')}
     </div>
@@ -462,21 +460,12 @@ function renderHome() {
   </section>
   <section class="grid">${items.length ? items.map((item, index) => cardHTML(item, index)).join('') : `<div class="empty">${escapeHTML(SITE_TEXTS.noResults)}</div>`}</section>`;
 
-  const field = document.querySelector('#search');
-  field?.addEventListener('input', event => {
-    state.query = event.target.value;
-    updateHomeResults();
-  });
-
   document.querySelectorAll('[data-category]').forEach(button => {
     button.addEventListener('click', () => {
       state.category = button.dataset.category;
       renderHome();
     });
   });
-
-  if (document.activeElement !== field && state.query) field?.focus();
-  if (state.query && field) field.setSelectionRange(state.query.length, state.query.length);
 }
 
 function renderError(code = '500') {
@@ -562,6 +551,8 @@ function wireBars() {
   detailTimers.clear();
 
   document.querySelectorAll('[data-expand]').forEach(button => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = '1';
     button.addEventListener('click', () => {
       const target = document.querySelector(`#expand-${button.dataset.expand}`);
       if (!target) return;
@@ -574,10 +565,13 @@ function wireBars() {
     });
   });
 
+  if (!appearance.animations || reducedMotion.matches) return;
+
   document.querySelectorAll('[data-marquee]').forEach(track => {
     const clip = track.closest('.marquee-clip');
     const group = track.querySelector('.marquee-group');
     if (!clip || !group) return;
+    track.style.animation = '';
 
     requestAnimationFrame(() => {
       if (track.dataset.prepared) return;
@@ -622,8 +616,66 @@ window.addEventListener('keydown', event => {
   }
 });
 
+reducedMotion.addEventListener?.('change', () => {
+  applyAppearance();
+  if (appearance.animations && !reducedMotion.matches && document.querySelector('.detail')) wireBars();
+});
+
+document.querySelector('#search').addEventListener('input', event => {
+  state.query = event.target.value;
+  const hash = location.hash || '#/';
+  if (hash !== '#/' && hash !== '#') {
+    location.hash = '#/';
+    return;
+  }
+  updateHomeResults();
+});
+
+document.querySelector('#theme-toggle').addEventListener('click', () => {
+  appearance.theme = appearance.theme === 'dark' ? 'light' : 'dark';
+  applyAppearance();
+  if (appearance.theme === 'light') showThemeWarning();
+  else hideThemeWarning();
+  saveAppearance();
+});
+
+document.querySelector('#animations-choice').addEventListener('change', event => {
+  appearance.animations = event.target.checked;
+  applyAppearance();
+  if (appearance.animations && !reducedMotion.matches && document.querySelector('.detail')) wireBars();
+  saveAppearance();
+});
+document.querySelector('#glass-choice').addEventListener('change', event => {
+  appearance.glass = event.target.checked;
+  applyAppearance();
+  saveAppearance();
+});
+
+document.addEventListener('pointermove', event => {
+  if (event.pointerType !== 'mouse') return;
+  const target = event.target.closest('.cursor-glow');
+  if (!target || !appearance.glass) return;
+  document.querySelectorAll('.cursor-glow.pointer-lit').forEach(element => {
+    if (element !== target && !element.matches(':hover')) element.classList.remove('pointer-lit');
+  });
+  const bounds = target.getBoundingClientRect();
+  target.style.setProperty('--pointer-x', `${event.clientX - bounds.left}px`);
+  target.style.setProperty('--pointer-y', `${event.clientY - bounds.top}px`);
+  target.classList.add('pointer-lit');
+});
+
+document.addEventListener('pointerout', event => {
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.cursor-glow.pointer-lit').forEach(element => {
+      if (!element.matches(':hover')) element.classList.remove('pointer-lit');
+    });
+  });
+});
+
 (async () => {
   try {
+    loadAppearance();
+    applyAppearance();
     renderLoading();
     loadCatalog();
     await route();
