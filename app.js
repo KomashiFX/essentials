@@ -1,19 +1,15 @@
 const SITE_TEXTS = Object.freeze({
-  heroKicker: 'Hospedado com amor pelo GitHub',
-  heroTitle: 'Bufus',
-  heroAccent: 'Essentials',
-  searchPlaceholder: 'Pesquisar no catálogo',
   openAction: 'ABRIR',
   noResults: 'Nenhum resultado encontrado.',
   loading: 'Carregando',
   errorTitle: 'OCORREU UM ERRO',
-  errorDescription: 'Infelizmente, o site possui algum problema.',
+  errorDescription: 'Algo aconteceu, perdão, isso será arrumado em breve.',
   backToCatalog: 'VOLTAR AO CATÁLOGO',
   contentTitle: 'Conteúdo',
   imagesTitle: 'Imagens',
   guideLabel: 'GUIA DE USO',
   informationLabel: 'INFORMAÇÃO',
-  warningLabel: 'Este conteúdo possui um aviso.',
+  warningLabel: 'Aviso sobre o conteúdo',
   removedLabel: 'CONTEÚDO REMOVIDO',
   linkLabel: 'ABRIR LINK',
 });
@@ -21,7 +17,10 @@ const SITE_TEXTS = Object.freeze({
 const state = {
   items: [],
   query: '',
-  category: 'TODOS'
+  categories: new Set(),
+  platforms: new Set(),
+  view: 'grid',
+  filtersOpen: false
 };
 
 const app = document.querySelector('#app');
@@ -280,7 +279,7 @@ function categories() {
     if (category && !map.has(category.toLowerCase())) map.set(category.toLowerCase(), category);
   });
 
-  return ['TODOS', ...Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
+  return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
 function platformsMap() {
@@ -297,7 +296,7 @@ function platformsMap() {
 }
 
 function normalizePlatform(value) {
-  const key = String(value ?? '').trim().toLowerCase();
+  const key = normalize(value).replace(/\s+/g, ' ');
   if (!key) return '';
   if (key === 'android-tv' || key.includes('smarttv') || key.includes('androidtv') || key === 'tv' || key.includes('television')) return 'tv';
   if (key.includes('pc') || key.includes('desktop') || key.includes('windows')) return 'pc';
@@ -306,16 +305,93 @@ function normalizePlatform(value) {
   if (key.includes('linux')) return 'linux';
   if (key.includes('web') || key.includes('browser')) return 'web';
   if (key.includes('tablet')) return 'tablet';
-  return 'other';
+  return key.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function itemPlatforms(item) {
+  return Array.isArray(item.Platforms)
+    ? item.Platforms
+    : typeof item.Platforms === 'string'
+      ? item.Platforms.split(/[\n,;]+/)
+      : [];
+}
+
+function platformOptions() {
+  const options = new Map();
+  const map = platformsMap();
+
+  state.items.forEach(item => {
+    itemPlatforms(item).forEach(value => {
+      const key = normalizePlatform(value);
+      if (!key || options.has(key)) return;
+      options.set(key, map[key]?.label || String(value).trim());
+    });
+  });
+
+  return Array.from(options, ([key, label]) => ({ key, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+}
+
+function activeFilterCount() {
+  return state.categories.size + state.platforms.size;
+}
+
+function resultMetaHTML(items) {
+  const count = activeFilterCount();
+  return items.length +
+    ' resultado' +
+    (items.length === 1 ? '' : 's') +
+    (state.query ? ' para “' + escapeHTML(state.query) + '”' : '') +
+    (count ? ` · ${count} ${count === 1 ? 'filtro ativo' : 'filtros ativos'}` : '');
+}
+
+function renderCatalogControls() {
+  const content = document.querySelector('#catalog-filter-content');
+  const panel = document.querySelector('#catalog-filter-panel');
+  const toggle = document.querySelector('#filters-toggle');
+  const count = document.querySelector('#active-filter-count');
+  const total = activeFilterCount();
+
+  if (!content || !panel || !toggle || !count) return;
+
+  content.innerHTML = `
+    <div class="filter-section">
+      <h2 class="filter-heading">Categorias</h2>
+      <div class="filter-options">
+        ${categories().map(category => {
+          const key = category.toLowerCase();
+          const selected = state.categories.has(key);
+          return `<button class="filter-option${selected ? ' active' : ''}" type="button" data-filter-category="${escapeHTML(key)}" aria-pressed="${selected}">${escapeHTML(category)}</button>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="filter-section">
+      <h2 class="filter-heading">Plataformas</h2>
+      <div class="filter-options">
+        ${platformOptions().map(platform => {
+          const selected = state.platforms.has(platform.key);
+          return `<button class="filter-option${selected ? ' active' : ''}" type="button" data-filter-platform="${escapeHTML(platform.key)}" aria-pressed="${selected}">${escapeHTML(platform.label)}</button>`;
+        }).join('')}
+      </div>
+    </div>
+    <button class="clear-filters" type="button" data-clear-filters ${total ? '' : 'disabled'}>Limpar filtros</button>`;
+
+  count.hidden = total === 0;
+  count.textContent = String(total);
+  count.setAttribute('aria-label', `${total} ${total === 1 ? 'filtro ativo' : 'filtros ativos'}`);
+  toggle.setAttribute('aria-expanded', String(state.filtersOpen));
+  panel.classList.toggle('is-open', state.filtersOpen);
+  panel.setAttribute('aria-hidden', String(!state.filtersOpen));
+  panel.inert = !state.filtersOpen;
+  document.querySelectorAll('[data-view]').forEach(button => {
+    const selected = button.dataset.view === state.view;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
 }
 
 function platformBadges(platforms) {
-  const values = Array.isArray(platforms)
-    ? platforms
-    : typeof platforms === 'string'
-      ? platforms.split(/[\n,;]+/)
-      : [];
-  const unique = [...new Set(values.map(normalizePlatform).filter(Boolean))];
+  const unique = [...new Set(itemPlatforms({ Platforms: platforms }).map(normalizePlatform).filter(Boolean))];
   const map = platformsMap();
 
   return unique.map(key => {
@@ -417,13 +493,9 @@ function updateHomeResults() {
   if (!grid || !meta) return;
 
   const items = filteredItems();
+  meta.innerHTML = resultMetaHTML(items);
 
-  meta.innerHTML =
-    items.length +
-    ' resultado' +
-    (items.length === 1 ? '' : 's') +
-    (state.query ? ' para “' + escapeHTML(state.query) + '”' : '');
-
+  grid.classList.toggle('list-view', state.view === 'list');
   grid.innerHTML = items.length
     ? items.map((item, index) => cardHTML(item, index)).join('')
     : '<div class="empty">' + escapeHTML(SITE_TEXTS.noResults) + '</div>';
@@ -432,9 +504,9 @@ function updateHomeResults() {
 function filteredItems() {
   let items = state.items.slice();
 
-  if (state.category !== 'TODOS') {
-    const selected = normalizeCategory(state.category).toLowerCase();
-    items = items.filter(item => normalizeCategory(item.Category).toLowerCase() === selected);
+  if (state.categories.size) items = items.filter(item => state.categories.has(normalizeCategory(item.Category).toLowerCase()));
+  if (state.platforms.size) {
+    items = items.filter(item => itemPlatforms(item).some(platform => state.platforms.has(normalizePlatform(platform))));
   }
 
   if (state.query.trim()) {
@@ -450,25 +522,17 @@ function filteredItems() {
 
 function renderHome() {
   const items = filteredItems();
-  const categoryList = categories();
+  document.querySelector('.site-header').classList.add('catalog-mode');
 
   app.innerHTML = `<section class="catalog-tools" id="catalog">
-    <div class="filters">
-      ${categoryList.map(category => `<button class="filter ${category === state.category ? 'active' : ''}" data-category="${escapeHTML(category)}" type="button">${icon('tag')}<span>${escapeHTML(category)}</span></button>`).join('')}
-    </div>
-    <div class="result-meta">${items.length} resultado${items.length === 1 ? '' : 's'}${state.query ? ` para “${escapeHTML(state.query)}”` : ''}</div>
+    <div class="result-meta">${resultMetaHTML(items)}</div>
   </section>
-  <section class="grid">${items.length ? items.map((item, index) => cardHTML(item, index)).join('') : `<div class="empty">${escapeHTML(SITE_TEXTS.noResults)}</div>`}</section>`;
-
-  document.querySelectorAll('[data-category]').forEach(button => {
-    button.addEventListener('click', () => {
-      state.category = button.dataset.category;
-      renderHome();
-    });
-  });
+  <section class="grid${state.view === 'list' ? ' list-view' : ''}">${items.length ? items.map((item, index) => cardHTML(item, index)).join('') : `<div class="empty">${escapeHTML(SITE_TEXTS.noResults)}</div>`}</section>`;
+  renderCatalogControls();
 }
 
 function renderError(code = '500') {
+  document.querySelector('.site-header').classList.remove('catalog-mode');
   app.innerHTML = `<section class="error-screen" role="alert">
     <div class="error-icon" aria-hidden="true">${icon('open')}</div>
     <div class="error-code">${escapeHTML(code)}</div>
@@ -481,6 +545,7 @@ function renderError(code = '500') {
 let detailRouteToken = 0;
 
 async function renderDetail(slug) {
+  document.querySelector('.site-header').classList.remove('catalog-mode');
   const currentToken = ++detailRouteToken;
   const meta = state.items.find(item => item.slug === slug);
 
@@ -628,6 +693,55 @@ document.querySelector('#search').addEventListener('input', event => {
     location.hash = '#/';
     return;
   }
+  updateHomeResults();
+});
+
+document.querySelector('#filters-toggle').addEventListener('click', () => {
+  state.filtersOpen = !state.filtersOpen;
+  renderCatalogControls();
+});
+
+document.querySelector('#catalog-filter-panel').addEventListener('click', event => {
+  const categoryButton = event.target.closest('[data-filter-category]');
+  const platformButton = event.target.closest('[data-filter-platform]');
+  let focusAttribute;
+  let focusValue;
+
+  if (categoryButton) {
+    const key = categoryButton.dataset.filterCategory;
+    if (state.categories.has(key)) state.categories.delete(key);
+    else state.categories.add(key);
+    focusAttribute = 'data-filter-category';
+    focusValue = key;
+  } else if (platformButton) {
+    const key = platformButton.dataset.filterPlatform;
+    if (state.platforms.has(key)) state.platforms.delete(key);
+    else state.platforms.add(key);
+    focusAttribute = 'data-filter-platform';
+    focusValue = key;
+  } else if (event.target.closest('[data-clear-filters]')) {
+    state.categories.clear();
+    state.platforms.clear();
+  } else {
+    return;
+  }
+
+  renderCatalogControls();
+  updateHomeResults();
+  if (focusAttribute) {
+    [...document.querySelectorAll(`#catalog-filter-panel [${focusAttribute}]`)]
+      .find(button => button.getAttribute(focusAttribute) === focusValue)
+      ?.focus();
+  } else {
+    document.querySelector('#filters-toggle').focus();
+  }
+});
+
+document.querySelector('.view-toggle').addEventListener('click', event => {
+  const button = event.target.closest('[data-view]');
+  if (!button || button.dataset.view === state.view) return;
+  state.view = button.dataset.view;
+  renderCatalogControls();
   updateHomeResults();
 });
 

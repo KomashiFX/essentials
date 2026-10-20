@@ -11,7 +11,7 @@
   <meta property="og:url" content="https://komashifx.github.io/essentials/">
   <title>Essentials</title>
   <link rel="icon" type="image/png" href="assets/logo.png">
-  <link rel="stylesheet" href="styles.css?v=2026.10.14-toolbar12">
+  <link rel="stylesheet" href="styles.css?v=2026.10.20-catalog-controls">
 </head>
 <body>
   <header class="site-header">
@@ -19,10 +19,30 @@
       <span class="brand-title">Bufus <em>Essentials</em></span>
       <span class="brand-kicker"><iconify-icon icon="solar:heart-linear" aria-hidden="true"></iconify-icon>Hospedado com amor pelo GitHub</span>
     </a>
-    <label class="search-field cursor-glow">
-      <iconify-icon class="icon" icon="solar:magnifer-linear" aria-hidden="true"></iconify-icon>
-      <input id="search" autocomplete="off" spellcheck="false" placeholder="Pesquisar no catálogo" aria-label="Pesquisar">
-    </label>
+    <div class="search-area">
+      <label class="search-field cursor-glow">
+        <iconify-icon class="icon" icon="solar:magnifer-linear" aria-hidden="true"></iconify-icon>
+        <input id="search" autocomplete="off" spellcheck="false" placeholder="Pesquisar no catálogo" aria-label="Pesquisar">
+      </label>
+      <div class="catalog-controls" aria-label="Controles do catálogo">
+        <button id="filters-toggle" class="catalog-control filters-toggle" type="button" aria-expanded="false" aria-controls="catalog-filter-panel">
+          <iconify-icon class="icon" icon="solar:filter-linear" aria-hidden="true"></iconify-icon>
+          <span>Filtros</span>
+          <span id="active-filter-count" class="active-filter-count" aria-label="0 filtros ativos" hidden>0</span>
+        </button>
+        <div class="view-toggle" role="group" aria-label="Modo de visualização">
+          <button class="catalog-control view-choice active" type="button" data-view="grid" aria-label="Visualização em grade" title="Visualização em grade" aria-pressed="true">
+            <iconify-icon class="icon" icon="solar:widget-5-linear" aria-hidden="true"></iconify-icon>
+          </button>
+          <button class="catalog-control view-choice" type="button" data-view="list" aria-label="Visualização em lista" title="Visualização em lista" aria-pressed="false">
+            <iconify-icon class="icon" icon="solar:list-linear" aria-hidden="true"></iconify-icon>
+          </button>
+        </div>
+      </div>
+      <section id="catalog-filter-panel" class="filter-panel" aria-label="Filtros do catálogo" aria-hidden="true" inert>
+        <div id="catalog-filter-content" class="filter-panel-content"></div>
+      </section>
+    </div>
     <div class="header-actions">
       <div class="theme-control">
         <button id="theme-toggle" class="theme-toggle glass-control cursor-glow" type="button" aria-label="Mudar para tema claro">
@@ -67,6 +87,6 @@
   <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js" integrity="sha384-JEyTNhjM6R1ElGoJns4U2Ln4ofPcqzSsynQkmEc/KGy6336qAZl70tDLufbkla+3" crossorigin="anonymous"></script>
   <script defer src="data/items/index.js?v=f6e556ce6c31"></script>
-  <script defer src="app.js?v=2026.10.14-toolbar12"></script>
+  <script defer src="app.js?v=2026.10.20-catalog-controls"></script>
 </body>
 </html>
