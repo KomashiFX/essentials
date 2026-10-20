@@ -24,6 +24,7 @@ const state = {
 };
 
 const app = document.querySelector('#app');
+let searchTimer;
 
 const detailTimers = new Set();
 const APPEARANCE_KEY = 'essentials-appearance';
@@ -173,36 +174,23 @@ function fuzzyScore(search, item) {
   const query = normalize(search);
   if (!query) return 0;
 
+  const names = [item.Title, ...(item.aliases || [])].map(normalize).filter(Boolean);
   const title = normalize(item.Title);
-  const aliases = (item.aliases || []).map(normalize);
   const category = normalize(item.Category);
   const description = normalize(item.Description);
-  const fields = [title, ...aliases, category, description].filter(Boolean);
-  let best = 0;
-
-  for (const text of fields) {
-    if (text === query) best = Math.max(best, 1);
-    if (text.includes(query)) {
-      best = Math.max(best, 0.92 - Math.min(0.2, (text.length - query.length) / 500));
-    }
-
-    for (const word of text.split(/\s+/)) {
-      const distance = editDistance(query, word);
-      const score = 1 - distance / Math.max(query.length, word.length, 1);
-      best = Math.max(best, score * (text === title ? 0.98 : 0.86));
-    }
-  }
+  if (description.includes(query) || category.includes(query)) return 0.72;
+  if (names.some(name => name.includes(query))) return names[0] === query ? 1 : 0.92;
 
   const parts = query.split(/\s+/).filter(Boolean);
-  if (parts.length > 1) {
-    const matched = parts.filter(part => fields.some(field => (
-      field.includes(part) ||
-      field.split(/\s+/).some(word => 1 - editDistance(part, word) / Math.max(part.length, word.length, 1) > 0.62)
-    ))).length;
-    best = Math.max(best, matched / parts.length * 0.85);
+  const matches = parts.map(part => Math.max(0, ...names.flatMap(name => name.split(/\s+/).map(word => (
+    part.length >= 3 && word.length >= 3
+      ? 1 - editDistance(part, word) / Math.max(part.length, word.length)
+      : 0
+  )))));
+  if (matches.length && matches.every(score => score >= 0.6)) {
+    return matches.reduce((sum, score) => sum + score, 0) / matches.length * (names.includes(title) ? 0.86 : 0.8);
   }
-
-  return best;
+  return 0;
 }
 
 function loadCatalog() {
@@ -337,22 +325,23 @@ function activeFilterCount() {
 }
 
 function resultMetaHTML(items) {
-  const count = activeFilterCount();
-  return items.length +
-    ' resultado' +
-    (items.length === 1 ? '' : 's') +
-    (state.query ? ' para “' + escapeHTML(state.query) + '”' : '') +
-    (count ? ` · ${count} ${count === 1 ? 'filtro ativo' : 'filtros ativos'}` : '');
+  const categoryLabels = new Map(categories().map(category => [category.toLowerCase(), category]));
+  const platformLabels = new Map(platformOptions().map(platform => [platform.key, platform.label]));
+  const chips = [
+    ...[...state.categories].map(key => ({ type: 'category', key, label: categoryLabels.get(key) || key })),
+    ...[...state.platforms].map(key => ({ type: 'platform', key, label: platformLabels.get(key) || key }))
+  ];
+  return `<span class="result-count">${items.length} ${items.length === 1 ? 'resultado' : 'resultados'}${state.query ? ` para “${escapeHTML(state.query)}”` : ''}</span>
+    ${chips.length ? `<span class="active-filters" aria-label="Filtros ativos">${chips.map(chip => `<button class="active-filter-chip" type="button" data-remove-filter="${chip.type}" data-filter-key="${escapeHTML(chip.key)}" aria-label="Remover filtro ${escapeHTML(chip.label)}"><span>${escapeHTML(chip.label)}</span><span aria-hidden="true">×</span></button>`).join('')}</span>
+    <button class="clear-filters" type="button" data-clear-filters>Limpar filtros</button>` : ''}`;
 }
 
 function renderCatalogControls() {
   const content = document.querySelector('#catalog-filter-content');
   const panel = document.querySelector('#catalog-filter-panel');
   const toggle = document.querySelector('#filters-toggle');
-  const count = document.querySelector('#active-filter-count');
-  const total = activeFilterCount();
 
-  if (!content || !panel || !toggle || !count) return;
+  if (!content || !panel || !toggle) return;
 
   content.innerHTML = `
     <div class="filter-section">
@@ -374,11 +363,8 @@ function renderCatalogControls() {
         }).join('')}
       </div>
     </div>
-    <button class="clear-filters" type="button" data-clear-filters ${total ? '' : 'disabled'}>Limpar filtros</button>`;
+    <button class="clear-filters" type="button" data-clear-filters ${activeFilterCount() ? '' : 'disabled'}>Limpar filtros</button>`;
 
-  count.hidden = total === 0;
-  count.textContent = String(total);
-  count.setAttribute('aria-label', `${total} ${total === 1 ? 'filtro ativo' : 'filtros ativos'}`);
   toggle.setAttribute('aria-expanded', String(state.filtersOpen));
   panel.classList.toggle('is-open', state.filtersOpen);
   panel.setAttribute('aria-hidden', String(!state.filtersOpen));
@@ -496,9 +482,21 @@ function updateHomeResults() {
   meta.innerHTML = resultMetaHTML(items);
 
   grid.classList.toggle('list-view', state.view === 'list');
+  updateSearchControls();
   grid.innerHTML = items.length
     ? items.map((item, index) => cardHTML(item, index)).join('')
     : '<div class="empty">' + escapeHTML(SITE_TEXTS.noResults) + '</div>';
+}
+
+function updateSearchControls() {
+  const input = document.querySelector('#search');
+  const clear = document.querySelector('#search-clear');
+  if (input && clear) clear.hidden = !input.value;
+}
+
+function scheduleSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(updateHomeResults, 150);
 }
 
 function filteredItems() {
@@ -522,17 +520,18 @@ function filteredItems() {
 
 function renderHome() {
   const items = filteredItems();
-  document.querySelector('.site-header').classList.add('catalog-mode');
+  document.querySelector('.catalog-shell').classList.add('catalog-mode');
 
   app.innerHTML = `<section class="catalog-tools" id="catalog">
     <div class="result-meta">${resultMetaHTML(items)}</div>
   </section>
   <section class="grid${state.view === 'list' ? ' list-view' : ''}">${items.length ? items.map((item, index) => cardHTML(item, index)).join('') : `<div class="empty">${escapeHTML(SITE_TEXTS.noResults)}</div>`}</section>`;
+  updateSearchControls();
   renderCatalogControls();
 }
 
 function renderError(code = '500') {
-  document.querySelector('.site-header').classList.remove('catalog-mode');
+  document.querySelector('.catalog-shell').classList.remove('catalog-mode');
   app.innerHTML = `<section class="error-screen" role="alert">
     <div class="error-icon" aria-hidden="true">${icon('open')}</div>
     <div class="error-code">${escapeHTML(code)}</div>
@@ -545,7 +544,7 @@ function renderError(code = '500') {
 let detailRouteToken = 0;
 
 async function renderDetail(slug) {
-  document.querySelector('.site-header').classList.remove('catalog-mode');
+  document.querySelector('.catalog-shell').classList.remove('catalog-mode');
   const currentToken = ++detailRouteToken;
   const meta = state.items.find(item => item.slug === slug);
 
@@ -688,11 +687,36 @@ reducedMotion.addEventListener?.('change', () => {
 
 document.querySelector('#search').addEventListener('input', event => {
   state.query = event.target.value;
+  updateSearchControls();
   const hash = location.hash || '#/';
   if (hash !== '#/' && hash !== '#') {
     location.hash = '#/';
     return;
   }
+  scheduleSearch();
+});
+
+document.querySelector('#search-clear').addEventListener('click', () => {
+  clearTimeout(searchTimer);
+  document.querySelector('#search').value = '';
+  state.query = '';
+  updateSearchControls();
+  updateHomeResults();
+  document.querySelector('#search').focus();
+});
+
+document.querySelector('#app').addEventListener('click', event => {
+  const button = event.target.closest('[data-remove-filter], [data-clear-filters]');
+  if (!button) return;
+
+  if (button.hasAttribute('data-clear-filters')) {
+    state.categories.clear();
+    state.platforms.clear();
+  } else {
+    const key = button.dataset.filterKey;
+    (button.dataset.removeFilter === 'category' ? state.categories : state.platforms).delete(key);
+  }
+  renderCatalogControls();
   updateHomeResults();
 });
 
