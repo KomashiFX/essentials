@@ -164,7 +164,7 @@ window.ESSENTIALS_ITEMS = [
     "slug": "pcsx2",
     "Title": "PCSX2",
     "aliases": null,
-    "Description": "Melhor emulador de PlayStation 2 que existe",
+    "Description": "Melhor emulador de PlayStation 2 que existe.",
     "Category": "Emuladores",
     "Platforms": [
       "pc"
