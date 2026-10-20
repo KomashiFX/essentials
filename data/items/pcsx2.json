@@ -3,7 +3,7 @@
   "Title": "PCSX2",
   "Description": "Melhor emulador de PlayStation 2 que existe.",
   "Category": "Emuladores",
-  "text": "A descrição já diz tudo, com 20+ anos de idade PCSX2 está sempre sendo atualizado e mantido vivo, e domina todos os outros emuladores que existe, então pegue sua [BIOS no VIMMs Lair](https://vimm.net/emulate) e se divirta.\n\nCaso esteja se perguntando onde baixa a BIOS é bem simples, desça a página e veja um texto **PS2 BIOS** vermelho abaixo do emulador, clique neste texto e extraia as ISOs e pronto, basta por no seu PCSX2.",
+  "text": "A descrição já diz tudo, com 20+ anos de idade PCSX2 está sempre sendo atualizado e mantido vivo, e domina todos os outros emuladores que existe, então pegue sua [BIOS no VIMMs Lair](https://vimm.net/emulate) e se divirta.\n\nCaso esteja se perguntando onde baixa a BIOS é bem simples, desça a página e veja um texto **PS2 BIOS** vermelho abaixo do emulador, clique neste texto e extraia as ISOs e pronto, basta por no seu PCSX2.\n\n> Quando for baixar o programa você vai ter que escolher suas versões\n> 1. Stable atualizações mais demoradas porém com menos bugs.\n> 2. Nightly: atualizações frequentes (que você pode ignorar) mas um pouco bugado, vai por pessoa, esse é o mais recomendado mesmo assim.",
   "important": "Configuração complexa",
   "importanttxt": "Você talvez precise de um tutorial para poder entender com mais facilidade como o PCSX2 funciona.",
   "guia": "ONDE BAIXAR JOGOS?",
@@ -11,5 +11,7 @@
   "Logo": "https://www.techspot.com/images2/downloads/topdownload/2021/01/2021-01-11-ts3_thumbs-e5a.png",
   "Platforms": [
     "pc"
-  ]
+  ],
+  "ButtonLink": "https://pcsx2.net/downloads/",
+  "ButtonLabel": "Baixar PCSX2"
 }
