@@ -9,8 +9,9 @@ const SITE_TEXTS = Object.freeze({
   imagesTitle: 'Imagens',
   guideLabel: 'GUIA DE USO',
   informationLabel: 'INFORMAÇÃO',
-  warningLabel: 'Aviso sobre o conteúdo',
-  removedLabel: 'CONTEÚDO REMOVIDO',
+  commonWarningLabel: 'AVISO',
+  importantLabel: 'AVISO IMPORTANTE',
+  criticalLabel: 'CONTEÚDO CRÍTICO',
   linkLabel: 'ABRIR LINK',
 });
 
@@ -130,6 +131,7 @@ const icons = {
   content: 'solar:document-text-linear',
   info: 'solar:info-circle-linear',
   warning: 'solar:danger-triangle-linear',
+  critical: 'material-symbols:warning-rounded',
   guide: 'solar:book-2-linear',
   computer: 'mdi:desktop-classic',
   phone: 'mdi:cellphone-android',
@@ -395,6 +397,7 @@ function cardHTML(item, index = 0) {
   const logo = item.Logo || item.logo;
   const platforms = platformBadges(item.Platforms);
   const category = normalizeCategory(item.Category);
+  const critical = item.critical || item.removed || item.criticaltxt || item.removedtxt;
 
   return `<a class="card cursor-glow" style="--card-index:${index}" href="#/item/${encodeURIComponent(item.slug)}">
     <div class="card-content">
@@ -405,6 +408,7 @@ function cardHTML(item, index = 0) {
       <div class="card-title-row">
         ${logoMarkup(logo)}
         <h2>${escapeHTML(item.Title)}</h2>
+        ${critical ? `<span class="critical-badge" role="img" aria-label="Conteúdo removido" title="Conteúdo removido">${icon('critical')}</span>` : ''}
       </div>
       <div class="card-description markdown">${cardDescriptionHTML(item.Description)}</div>
     </div>
@@ -417,7 +421,7 @@ function noticeIcon(type) {
 }
 
 function marqueeBar(type, text, content) {
-  const className = type === 'warn' ? 'warn-bar' : type === 'info' ? 'info-bar' : 'removed-bar critical-bar';
+  const className = type === 'warn' ? 'warn-bar' : type === 'info' ? 'info-bar' : 'important-bar critical-bar';
   const label = escapeHTML(text);
 
   return `<div class="dynamic-bar ${className}" data-marquee-bar>
@@ -451,7 +455,7 @@ function summarizeNotice(value, maxLength = 150) {
 
 function detailBarWithFlip(type, shortText, longText) {
   const className = type === 'warn' ? 'warn-bar' : type === 'guide' ? 'guide-bar' : 'info-bar';
-  const label = shortText || (type === 'guide' ? SITE_TEXTS.guideLabel : type === 'info' ? SITE_TEXTS.informationLabel : SITE_TEXTS.warningLabel);
+  const label = shortText || (type === 'guide' ? SITE_TEXTS.guideLabel : type === 'info' ? SITE_TEXTS.informationLabel : SITE_TEXTS.commonWarningLabel);
   const summary = summarizeNotice(longText);
 
   return `<div class="dynamic-bar ${className}" data-notice-flip>
@@ -470,6 +474,7 @@ function detailBarWithFlip(type, shortText, longText) {
 }
 
 function renderLoading() {
+  document.body.classList.remove('critical-mode');
   app.innerHTML = `<div class="loading-screen" role="status" aria-live="polite"><span class="loading-mark" aria-hidden="true">${icon('loading')}</span><span>${SITE_TEXTS.loading}</span></div>`;
 }
 
@@ -519,6 +524,7 @@ function filteredItems() {
 }
 
 function renderHome() {
+  document.body.classList.remove('critical-mode');
   const items = filteredItems();
   document.querySelector('.catalog-shell').classList.add('catalog-mode');
 
@@ -531,6 +537,7 @@ function renderHome() {
 }
 
 function renderError(code = '500') {
+  document.body.classList.remove('critical-mode');
   document.querySelector('.catalog-shell').classList.remove('catalog-mode');
   app.innerHTML = `<section class="error-screen" role="alert">
     <div class="error-icon" aria-hidden="true">${icon('open')}</div>
@@ -562,8 +569,21 @@ async function renderDetail(slug) {
     const item = { ...meta, ...await response.json() };
     if (currentToken !== detailRouteToken) return;
 
-    const removed = Boolean(item.removed !== undefined || item.removedtxt);
-    const warning = Boolean(item.warn);
+    const criticalTitle = item.critical || item.removed || '';
+    const criticalText = item.criticaltxt || item.removedtxt || '';
+    if (criticalTitle || criticalText) {
+      document.body.classList.add('critical-mode');
+      app.innerHTML = `<section class="critical-screen" role="alert">
+        <span class="critical-screen-icon" aria-hidden="true">${icon('critical')}</span>
+        <h1>${escapeHTML(criticalTitle || SITE_TEXTS.criticalLabel)}</h1>
+        ${criticalText ? `<div class="critical-description markdown">${markdownHTML(criticalText)}</div>` : ''}
+        <a class="critical-back" href="#/">${icon('back')} ${escapeHTML(SITE_TEXTS.backToCatalog)}</a>
+      </section>`;
+      return;
+    }
+
+    const important = Boolean(item.important || item.importanttxt);
+    const warning = Boolean(item.warn || item.warnTitle);
     const information = Boolean(item.info || item.infotxt);
     const guide = Boolean(item.guiatxt);
     const hasNotices = warning || information || guide;
@@ -581,7 +601,7 @@ async function renderDetail(slug) {
 
     app.innerHTML = `<div class="detail-wrap">
       <a class="back" href="#/">${icon('back')} ${escapeHTML(SITE_TEXTS.backToCatalog)}</a>
-      ${removed ? `<div class="detail-removed">${marqueeBar('removed', item.removed || SITE_TEXTS.removedLabel, item.removedtxt || '')}</div>` : ''}
+      ${important ? marqueeBar('important', item.important || SITE_TEXTS.importantLabel, item.importanttxt || '') : ''}
       <article class="detail">
         <header class="detail-head">
           ${category || platforms ? `<div class="detail-meta">${category ? `<span class="detail-category">${icon('tag')} ${escapeHTML(category)}</span>` : ''}${platforms ? `<div class="detail-platforms">${platforms}</div>` : ''}</div>` : ''}
@@ -593,7 +613,7 @@ async function renderDetail(slug) {
           ${content ? `<div class="section-block markdown"><h3>${icon('content')} ${escapeHTML(SITE_TEXTS.contentTitle)}</h3>${markdownHTML(content)}</div>` : ''}
           ${images.length ? `<div class="section-block"><h3>${icon('gallery')} ${escapeHTML(SITE_TEXTS.imagesTitle)}</h3><div class="images">${images.map(src => `<img loading="lazy" decoding="async" src="${escapeHTML(src)}" alt="Imagem de ${escapeHTML(item.Title)}">`).join('')}</div></div>` : ''}
           ${hasNotices ? '<div class="line-sep" role="separator"></div>' : ''}
-          ${warning ? detailBarWithFlip('warn', item.warnTitle || SITE_TEXTS.warningLabel, item.warn) : ''}
+          ${warning ? detailBarWithFlip('warn', item.warnTitle || SITE_TEXTS.commonWarningLabel, item.warn) : ''}
           ${information ? detailBarWithFlip('info', item.info || SITE_TEXTS.informationLabel, item.infotxt || item.info) : ''}
           ${guide ? detailBarWithFlip('guide', item.guia || SITE_TEXTS.guideLabel, item.guiatxt) : ''}
         </div>
@@ -666,10 +686,17 @@ function wireBars() {
 
 async function route() {
   const hash = location.hash || '#/';
-  if (hash === '#/' || hash === '#') return renderHome();
+  if (hash === '#/' || hash === '#') {
+    detailRouteToken += 1;
+    return renderHome();
+  }
 
   const match = hash.match(/^#\/item\/(.+)$/);
-  return match ? renderDetail(decodeURIComponent(match[1])) : renderHome();
+  if (!match) {
+    detailRouteToken += 1;
+    return renderHome();
+  }
+  return renderDetail(decodeURIComponent(match[1]));
 }
 
 window.addEventListener('hashchange', route);

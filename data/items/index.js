@@ -69,6 +69,20 @@ window.ESSENTIALS_ITEMS = [
     "Logo": "M.00000117 61.5156237V4.6302097l66.145831 37.041664v19.84375l-47.624995-26.72291v16.40416zm66.145831-30.42707-23.547916-13.229174 23.547916-13.22917Z"
   },
   {
+    "file": "hitomi.json",
+    "slug": "hitomi",
+    "Title": "Hitomi Downloader",
+    "aliases": null,
+    "Description": "Um baixador de vídeos, músicas, mangás e etc.",
+    "Category": "Ferramentas",
+    "Platforms": [
+      "pc"
+    ],
+    "critical": "Queda por DMCA",
+    "Image": null,
+    "Logo": "https://avatars.githubusercontent.com/u/294269720?s=280&v=4"
+  },
+  {
     "file": "iisu.json",
     "slug": "iisu",
     "Title": "iiSU Launcher",

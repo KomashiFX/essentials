@@ -1,0 +1,13 @@
+{
+  "slug": "hitomi",
+  "Title": "Hitomi Downloader",
+  "Description": "Um baixador de vídeos, músicas, mangás e etc.",
+  "Category": "Ferramentas",
+  "text": "Como o nome já diz Hitomi é um programa que baixa mangás, vídeos músicas e muito mais, isso tudo com suporte a **+1000 sites**, e não tem segredo, você só precisa por o link na barra de download e selecionar o formato que você e pronto, acabou, está tudo feito.",
+  "critical": "Queda por DMCA",
+  "criticaltxt": "Infelizmente Hitomi Downloader não sobreviveu por muito tempo, eles tiveram o projeto derrubado por [DMCA](https://pt.wikipedia.org/wiki/Digital_Millennium_Copyright_Act) e não tem previsão de volta, então é recomendado que você use **[este programa](https://github.com/imsyy/yt-dlp-gui/releases)** no lugar.",
+  "Logo": "https://avatars.githubusercontent.com/u/294269720?s=280&v=4",
+  "Platforms": [
+    "pc"
+  ]
+}

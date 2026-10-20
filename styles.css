@@ -92,6 +92,9 @@ iconify-icon.icon {
 .platform-badge .icon { width: 12px; height: 12px; min-width: 12px; min-height: 12px; flex-basis: 12px; }
 .platform-logo-linux { width: 15px; height: 15px; flex: 0 0 15px; display: block; object-fit: contain; border: 0; border-radius: 0; background: transparent; }
 .card-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.critical-badge { width: 19px; height: 19px; flex: 0 0 19px; display: inline-flex; align-items: center; justify-content: center; color: #ff5252; }
+.critical-badge { position: relative; cursor: help; }
+.critical-badge .icon { width: 18px; height: 18px; min-width: 18px; min-height: 18px; flex-basis: 18px; }
 .card-logo { width: 30px; height: 30px; flex: 0 0 30px; padding: 0; object-fit: contain; border: 0; border-radius: 0; background: transparent; display: block; }
 .card h2 { min-width: 0; margin: 0; overflow: hidden; color: var(--text); font-family: var(--font-sans); font-size: 17px; font-weight: 600; letter-spacing: -.03em; text-overflow: ellipsis; white-space: nowrap; }
 .card-description { margin-top: 11px; color: var(--muted); font-size: 12px; line-height: 1.68; }
@@ -167,7 +170,6 @@ iconify-icon.icon {
 .markdown img { max-width: 100%; height: auto; display: block; margin: 12px 0; border: 1px solid rgba(224,235,207,.08); border-radius: 18px; }
 
 /* Notices */
-.detail-removed { margin-bottom: 11px; }
 .dynamic-bar { overflow: hidden; border: 1px solid var(--notice-border); border-radius: 18px; color: var(--notice-ink); background: var(--notice-bg); }
 .dynamic-bar + .dynamic-bar { margin-top: 9px; }
 .dynamic-bar button { margin: 0; }
@@ -279,6 +281,20 @@ iconify-icon.icon {
 .error-code { margin-top: 18px; color: var(--accent); font: 700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing: .18em; }
 .error-screen h1 { margin: 10px 0 8px; font-family: var(--font-sans); font-size: clamp(30px,5vw,50px); letter-spacing: -.05em; }
 .error-screen p { max-width: 460px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.critical-mode { --bg: #a90000; --panel: #a90000; --panel-2: #8f0000; --text: #fff; --muted: rgba(255,255,255,.86); background: #a90000; }
+.critical-mode .site-header, .critical-mode .catalog-toolbar, .critical-mode .footer { display: none; }
+.critical-mode .catalog-shell { min-height: 100vh; display: grid; align-items: center; background: #a90000; }
+.critical-mode #app { width: 100%; }
+.critical-screen { width: min(760px, calc(100% - 40px)); min-height: 100vh; margin: 0 auto; padding: 48px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; }
+.critical-screen-icon { width: 64px; height: 64px; display: grid; place-items: center; margin-bottom: 20px; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; background: rgba(60,0,0,.18); }
+.critical-screen-icon .icon { width: 34px; height: 34px; min-width: 34px; min-height: 34px; flex-basis: 34px; }
+.critical-screen h1 { margin: 0; font-size: clamp(28px, 6vw, 48px); line-height: 1.1; overflow-wrap: anywhere; }
+.critical-description { max-width: 620px; margin-top: 16px; color: rgba(255,255,255,.92); font-size: 15px; line-height: 1.75; }
+.critical-description > :last-child { margin-bottom: 0; }
+.critical-back { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 30px; padding: 0 16px; border: 1px solid rgba(255,255,255,.55); border-radius: 12px; color: #fff; text-decoration: none; font-size: 11px; font-weight: 750; letter-spacing: .07em; transition: background .18s ease, transform .18s ease; }
+.critical-back:hover, .critical-back:focus-visible { outline: 0; background: rgba(60,0,0,.35); transform: translateY(-2px); }
+.critical-back .icon { width: 16px; height: 16px; }
+.detail-wrap > .dynamic-bar { margin: 0 0 12px; }
 .error-back { margin-top: 22px; margin-bottom: 0; }
 
 /* Footer */
@@ -422,7 +438,7 @@ main, .footer { position: relative; z-index: 1; }
   margin: 0 auto;
   padding: 18px 0;
   display: grid;
-  grid-template-columns: minmax(180px, auto) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 18px;
 }
