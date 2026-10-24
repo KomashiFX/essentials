@@ -1,5 +1,5 @@
 :root {
-  --bg: #000;
+  --bg: #0c0c0c;
   --panel: rgba(15, 16, 17, .92);
   --panel-2: #121414;
   --text: #f2f4f5;
@@ -396,7 +396,7 @@ main, .footer { position: relative; z-index: 1; }
 .card-title-row { gap: 12px; }
 .card-logo { width: 34px; height: 34px; flex-basis: 34px; }
 .card h2 { white-space: normal; overflow: visible; font-size: 18px; font-weight: 650; letter-spacing: -.035em; }
-.card-description { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; margin-top: 13px; font-size: 13px; line-height: 1.65; }
+.card-description { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; margin-top: 13px; font-size: 13px; line-height: 1.65; }
 .card-description ul, .card-description ol, .card-description h1, .card-description h2, .card-description h3,
 .card-description blockquote, .card-description pre, .card-description table { display: none; }
 .card-foot { min-height: 47px; padding-inline: 20px; border-color: rgba(224,235,237,.08); color: var(--accent); font-size: 10px; letter-spacing: .12em; }
@@ -807,7 +807,7 @@ main, .footer { position: relative; z-index: 1; }
 .grid.list-view .card-category { justify-content: flex-end; text-align: right; }
 .grid.list-view .card-platforms { justify-content: flex-end; }
 .grid.list-view .card-title-row { grid-column: 1; grid-row: 1; }
-.grid.list-view .card-description { grid-column: 2; grid-row: 1 / span 2; display: -webkit-box; -webkit-line-clamp: 2; margin: 0; font-size: 12px; }
+.grid.list-view .card-description { grid-column: 2; grid-row: 1 / span 2; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; margin: 0; font-size: 12px; }
 .grid.list-view .card-foot { min-width: 86px; min-height: 0; align-self: stretch; border-top: 0; border-left: 1px solid var(--line); }
 .grid.list-view .card:hover, .grid.list-view .card:focus-visible { transform: translateY(-2px); }
 
